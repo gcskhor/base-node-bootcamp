@@ -133,3 +133,4 @@ INSERT INTO expenses_tags (tag_id, expense_id) VALUES (1, 4);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (2, 3);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (3, 1);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (3, 2);
+
