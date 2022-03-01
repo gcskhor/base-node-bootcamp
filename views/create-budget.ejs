@@ -1,0 +1,55 @@
+<form
+  class="row g-3 needs-validation"
+  action="/create-budget"
+  method="POST"
+  novalidate
+>
+  <!--  BUDGET CATEGORY -->
+  <div class="col-md-4">
+    <label for="name" class="form-label">Budget Name</label>
+    <input type="text" class="form-control" id="name" name="name" required />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
+
+  <!-- BUDGET AMOUNT -->
+  <div class="col-md-4">
+    <label for="budget_amount" class="form-label">Budget Amount</label>
+    <input
+      type="number"
+      class="form-control"
+      id="budget_amount"
+      name="budget_amount"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
+
+  <!-- START DATE -->
+  <div class="col-md-4">
+    <label for="date" class="form-label">Start Date</label>
+    <input
+      class="form-control"
+      type="date"
+      name="start_date"
+      id="date"
+      min="2015/01/01"
+      placeholder="mm/dd/yyyy"
+      required
+    />
+    <div class="invalid-feedback">Please enter a start date</div>
+    <div class="valid-feedback">Remarkable!</div>
+  </div>
+
+  <!-- TAG CHECKBOXES -->
+  <% tags.forEach((tag) => { %>
+  <label><%= tag.name %></label>
+  <input type="checkbox" name="tag_ids" value="<%= tags.id %>" />
+  <% }); %>
+
+  <!-- submit button  -->
+  <div class="col-12">
+    <button class="btn btn-primary" type="submit">Submit form</button>
+  </div>
+</form>

@@ -1,0 +1,16 @@
+<div class="row">
+  <% results.forEach(budget => { %>
+    <div class="col-9">
+      <h3><%= budget.budget_name %></h3>
+      <% budget.expenses.forEach(expense => { %>
+        <div>
+          <%= expense.name %></br>
+          $ <%= expense.expense_amount %></br>
+          By User: <%= expense.username %></br>
+        </br>
+        <div>
+      <% }) %> 
+      </div></br>
+    </div>
+  <% }) %>
+</div>
