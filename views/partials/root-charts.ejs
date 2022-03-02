@@ -3,12 +3,11 @@
   google.charts.load("current", { packages: ["corechart"] });
   google.charts.setOnLoadCallback(drawChart);
   function drawChart() {
-    var data = google.visualization.arrayToDataTable([
-      ["User", "Spend per user"],
-      ["Daddy", 6],
-      ["Kid 1", 2],
-      ["Kid 2", 2],
-    ]);
+    var arrayDonut = `<%- JSON.stringify(gDonutData) %>`;
+
+    var data = google.visualization.arrayToDataTable(JSON.parse(arrayDonut));
+
+    // gDonutData
 
     // [
     //   ["User", "Spend per user"],
@@ -18,7 +17,7 @@
     // ];
 
     var options = {
-      title: "My Daily Activities",
+      title: "WHO IS SPENDING THE MONEY??",
       pieHole: 0.4,
     };
 

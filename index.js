@@ -251,6 +251,39 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
       // ##################################################
       // ---------------WRANGLE DATA IN HERE---------------
 
+      // DONUT CHART
+      // HEADER ARRAY
+      const gDonutHeaderArray = ['User', 'Spend Per User'];
+      const gDonutBodyArray = [];
+      const perUserTotalSpendArray = []; // this array holds the sum of all expenses per user [0,0,0]
+
+      usernameIdArray.forEach((user) => {
+        // gDonutBodyArray.push(user); // add user names into an array
+        perUserTotalSpendArray.push(0); // push value of 0 per user.
+      });
+
+      usernameIdArray.forEach((user, userIndex) => {
+        data.forEach((budget) => {
+          budget.expenseByUser[userIndex].forEach((expense) => {
+            perUserTotalSpendArray[userIndex] += Number(expense.expense_amount);
+          });
+        });
+      });
+
+      console.log(usernameIdArray);
+      console.log(perUserTotalSpendArray);
+      usernameIdArray.forEach((user, index) => {
+        gDonutBodyArray.push([user]);
+        gDonutBodyArray[index].push(perUserTotalSpendArray[index]);
+      });
+
+      // console.log(gDonutBodyArray);
+      const gDonutArray = [gDonutHeaderArray, ...gDonutBodyArray];
+      console.log(gDonutArray);
+
+      // ###################################################
+      // ###################################################
+      // BAR CHART
       // HEADER ARRAY
       const gBarHeaderArray = ['Budgets', ...data[0].users];
       // gBarHeaderArray.push(data[0].users);
@@ -270,18 +303,29 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
       // console.log(gBarBodyArray);
       // console.log(gBarArray);
 
-      //         ###### DATA SHOULD LOOK LIKE THIS #######
+      //   ###################################################
+      //   ###### DONUT CHART DATA SHOULD LOOK LIKE THIS #######
+      // [
+      //   ["User", "Spend per user"],
+      //   ["Daddy", 6],
+      //   ["Kid 1", 2],
+      //   ["Kid 2", 2],
+      // ];
+      //   ################################################
+      //   ###### BAR CHART DATA SHOULD LOOK LIKE THIS #######
       // [
       //   ['Budgets', 'Boss', 'kid1', 'kid2', 'Remaining Budget'],
       //   ['Household', 10, 20, 30, 140],
       //   ['Fun Stuff', 0, 12000, 20, 0],
       //   ['NFTs', 0, 20000, 0, 0],
       // ];
+      //   ################################################
 
       // ---------------END WRANGLING DATA-----------------
       // ##################################################
 
-      const dataObj = { results: data, gBarData: gBarArray };
+      // console.log(data);
+      const dataObj = { results: data, gBarData: gBarArray, gDonutData: gDonutArray };
 
       return res.render('root', dataObj);
     })
