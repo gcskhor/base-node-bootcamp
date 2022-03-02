@@ -7,6 +7,10 @@ import cookieParser from 'cookie-parser';
 import expressLayouts from 'express-ejs-layouts';
 import jsSHA from 'jssha';
 import schedule from 'node-schedule';
+import multer from 'multer';
+
+// set the name of the upload directory here
+const multerUpload = multer({ dest: 'uploads/' });
 
 const { Pool } = pg;
 const pgConnectionConfigs = {
@@ -17,7 +21,7 @@ const pgConnectionConfigs = {
 };
 
 const pool = new Pool(pgConnectionConfigs);
-const PORT = 3004;
+const PORT = 3005;
 const app = express();
 
 app.use(expressLayouts);
@@ -41,20 +45,30 @@ const getHash = (input) => {
 };
 
 // CHECK IF EMAIL ADDRESS EXISTS IN USERS TABLE
+// const checkIfEmailExists = (emailInput) => {
+//   const emailQuery = `SELECT * FROM users WHERE email = '${emailInput}'`;
+
+//   pool.query(emailQuery)
+//     .then((result) => {
+//       if (result.rows.length > 0) {
+//         return true;
+//       }
+
+//       return false;
+//     });
+// };
+
 const checkIfEmailExists = (emailInput) => {
   const emailQuery = `SELECT * FROM users WHERE email = '${emailInput}'`;
 
-  console.log(emailQuery);
-
-  pool.query(emailQuery)
-    .then((result) => {
-      if (result.rows.length > 0) {
-        return true;
-      }
-
-      return false;
-    });
+  return pool.query(emailQuery)
+    .then((result) => result.rows.length > 0);
 };
+
+// const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
+//   console.log('job!!');
+//   testjob.cancel();
+// });
 
 // ------------------------------------------------------------------------------- //
 //  CUSTOM MIDDLEWARE
@@ -132,11 +146,6 @@ const loginCheck = (req, res, next) => {
 //   next();
 // };
 
-// const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
-//   console.log('job!!');
-//   testjob.cancel();
-// });
-
 // ------------------------------------------------------------------------------- //
 
 app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
@@ -148,31 +157,42 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
     res.status(403).send('please log in again.');
   }
   const { userId } = req.cookies;
-  const { familyId } = req.cookies; // later add for finding family without querying.
+  const { familyId } = req.cookies;
 
-  // get budget information
-  const sqlQuery = `
-    SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount
-    FROM budgets 
-    WHERE budgets.family_id=(SELECT users.family_id from users WHERE users.id = ${userId});
-    `;
-
+  // add extra query in the chain to create an array of userIds. (filter expenses using userIds)
+  const selectFamilyUsersQuery = `SELECT * FROM users WHERE family_id = ${familyId}`;
+  const usernameIdArray = [];
   const budgetIdArray = [];
   let data;
 
-  pool.query(sqlQuery)
+  pool.query(selectFamilyUsersQuery)
+    .then((result) => {
+      // get out familyuser data.
+
+      result.rows.forEach((user) => {
+        usernameIdArray.push(user.username);
+      });
+      const selectBudgetQuery = `
+      SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount
+      FROM budgets 
+      WHERE budgets.family_id=(SELECT users.family_id from users WHERE users.id = ${userId});
+      `;
+
+      return pool.query(selectBudgetQuery);
+    })
+
     .then((result) => {
       data = result.rows;
-      console.log(data);
+      // console.log(data);
 
       // add budget ids into separate array
       data.forEach((budget, index) => {
         budgetIdArray[index] = budget.budget_id;
       });
-      console.log(budgetIdArray);
+
       // create query with string literals to throw in budgetIdArray
       const selectExpenseByBudgetIdQuery = `
-      SELECT expenses.name, expenses.budget_id, expenses.expense_amount, users.username FROM expenses
+      SELECT expenses.name, expenses.budget_id, expenses.expense_amount, expenses.user_id, users.username FROM expenses
       INNER JOIN users ON expenses.user_id = users.id
       WHERE expenses.budget_id IN (${budgetIdArray})
       `;
@@ -181,13 +201,88 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
     })
     .then((results) => {
       const allExpenses = results.rows;
-
-      console.table(allExpenses);
+      // console.table(allExpenses);
       data.forEach((budget, index) => {
+        budget.users = usernameIdArray; // add users into each budget object
+
+        // using the budgetIdArray, extract expense item objects based on budgetID in the array.
         const singleBudgetExpenses = allExpenses.filter((expense) => expense.budget_id === budget.budget_id);
         budget.expenses = singleBudgetExpenses;
+        // console.log(budget);
+        // run a forEach Loop to total the spend in each budget
+        let budgetSpendTotal = 0;
+
+        singleBudgetExpenses.forEach((expense) => {
+          budgetSpendTotal += Number(expense.expense_amount);
+        });
+
+        budget.amountSpent = budgetSpendTotal;
+
+        // ------------- end of total budget count --------------
+        // using the usernameIdArray, extract expense item objects based on whether their username matches in the array.
+        budget.expenseByUser = [];
+        budget.userTotalSpendArray = [];
+        usernameIdArray.forEach((username) => {
+          const singleUserExpenses = singleBudgetExpenses.filter((expense) => expense.username === username);
+          budget.expenseByUser.push(singleUserExpenses);
+
+          // sum up total spend per user per budget
+          let spendTotalPerUser = 0;
+          singleUserExpenses.forEach((expense) => {
+            spendTotalPerUser += Number(expense.expense_amount);
+          });
+          // console.log(spendTotalPerUser);
+          budget.userTotalSpendArray.push(spendTotalPerUser);
+        });
+
+        // add remainingBudget key to budget
+        budget.remainingBudget = Number(budget.budget_amount) - Number(budget.amountSpent);
+
+        // add boolean exceeded_budget = true/false and set remaining budget to 0 if true
+        if (budget.remainingBudget < 0) {
+          budget.exceededBudget = true;
+          budget.remainingBudget = 0;
+        }
+        else {
+          budget.exceededBudget = false;
+        }
       });
-      const dataObj = { results: data };
+
+      // ##################################################
+      // ---------------WRANGLE DATA IN HERE---------------
+
+      // HEADER ARRAY
+      const gBarHeaderArray = ['Budgets', ...data[0].users];
+      // gBarHeaderArray.push(data[0].users);
+      gBarHeaderArray.push('Remaining Budget');
+
+      // BODY ARRAY
+      const gBarBodyArray = [];
+      data.forEach((budget, index) => {
+        gBarBodyArray.push(budget.userTotalSpendArray);
+        budget.userTotalSpendArray.push(budget.remainingBudget);
+      });
+      gBarBodyArray.forEach((bodyArray, index) => bodyArray.unshift(data[index].budget_name));
+
+      const gBarArray = [...[gBarHeaderArray], ...gBarBodyArray];
+
+      // console.log(gBarHeaderArray);
+      // console.log(gBarBodyArray);
+      // console.log(gBarArray);
+
+      //         ###### DATA SHOULD LOOK LIKE THIS #######
+      // [
+      //   ['Budgets', 'Boss', 'kid1', 'kid2', 'Remaining Budget'],
+      //   ['Household', 10, 20, 30, 140],
+      //   ['Fun Stuff', 0, 12000, 20, 0],
+      //   ['NFTs', 0, 20000, 0, 0],
+      // ];
+
+      // ---------------END WRANGLING DATA-----------------
+      // ##################################################
+
+      const dataObj = { results: data, gBarData: gBarArray };
+
       return res.render('root', dataObj);
     })
     .catch((error) => {
@@ -383,7 +478,9 @@ app.get('/create-expense', (req, res) => {
   });
 });
 
-app.post('/create-expense', loginCheck, (req, res) => {
+app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, res) => {
+  console.log(req.file);
+
   // console.log(req.body);
   const { userId } = req.cookies;
   const { familyId } = req.cookies;

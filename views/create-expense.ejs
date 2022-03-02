@@ -3,6 +3,7 @@
   action="/create-expense"
   method="POST"
   novalidate
+  enctype="multipart/form-data"
 >
   <!--  EXPENSE CATEGORY -->
   <div class="col-md-4">
@@ -51,6 +52,9 @@
     <div class="invalid-feedback">Please enter a start date</div>
     <div class="valid-feedback">Remarkable!</div>
   </div>
+
+  <label for="photo" class="form-label">upload photo:</label><br />
+  <input type="file" name="photo" />
 
   <!-- submit button  -->
   <div class="col-12">
