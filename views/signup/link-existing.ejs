@@ -1,4 +1,4 @@
-<h2>Sign up (link to an existing family)</h2>
+<h2>Sign up (link to <%= username %>'s family)</h2>
 <form action="/signup/link-existing" method="POST">
   <label for="email" class="form-label">email address</label>
   <input type="text" name="email" />
@@ -12,11 +12,13 @@
   <input type="text" name="password" />
   <br />
 
-  <label for="main_user_email" class="form-label"
+  <!-- <label for="main_user_email" class="form-label"
     >Enter your Family's main account email address:</label
   >
   <input type="text" name="main_user_email" />
-  <br />
+  <br /> -->
+
+  <input type="hidden" id="parent_id" name="parent_id" value="<%= userId %>" />
 
   <input type="submit" value="Submit" />
 </form>

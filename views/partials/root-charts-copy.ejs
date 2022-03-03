@@ -1,0 +1,86 @@
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+  google.charts.load("current", { packages: ["corechart"] });
+  google.charts.setOnLoadCallback(drawChart);
+  function drawChart() {
+    var arrayDonut = `<%- JSON.stringify(gDonutData) %>`;
+
+    var data = google.visualization.arrayToDataTable(JSON.parse(arrayDonut));
+
+    // gDonutData
+
+    // [
+    //   ["User", "Spend per user"],
+    //   ["Daddy", 6],
+    //   ["Kid 1", 2],
+    //   ["Kid 2", 2],
+    // ];
+
+    var options = {
+      title: "WHO IS SPENDING THE MONEY??",
+      pieHole: 0.4,
+    };
+
+    var chart = new google.visualization.PieChart(
+      document.getElementById("donutchart")
+    );
+    chart.draw(data, options);
+  }
+</script>
+
+<script>
+  google.charts.load("current", { packages: ["corechart", "bar"] });
+  google.charts.setOnLoadCallback(drawStacked);
+
+  function drawStacked() {
+    // THIS IS HOW THE DATA SHOULD LOOK
+    // var data = google.visualization.arrayToDataTable([
+    //   ["Budgets", "Boss", "kid1", "kid2", "Remaining Budget", { role: "link" }],
+    //   ["Household", 10, 20, 30, 140, "/budget/1"],
+    //   ["Fun Stuff", 0, 12000, 20, 0, "/budget/2"],
+    //   ["NFTs", 0, 20000, 0, 0, "/budget/5"],
+    // ]);
+
+    var array = `<%- JSON.stringify(gBarData) %>`;
+    var data = google.visualization.arrayToDataTable(JSON.parse(array));
+
+    var options = {
+      title: "YOUR FAMILY BUDGETS",
+      height: 350,
+      chartArea: {
+        width: "80%",
+      },
+      isStacked: "percent",
+      hAxis: {
+        title: "",
+        minValue: 0,
+        ticks: [],
+      },
+      vAxis: {
+        title: "",
+      },
+      animation: {
+        startup: true,
+        duration: 600,
+      },
+    };
+
+    var chart = new google.visualization.BarChart(
+      document.getElementById("point")
+    );
+
+    var variableRowCount = `<%= gBarRowCount %>`;
+
+    // added event listener below chart variable declaration
+    google.visualization.events.addListener(chart, "select", function (e) {
+      var selection = chart.getSelection();
+      if (selection.length) {
+        var row = selection[0].row;
+        let link = data.getValue(row, JSON.parse(variableRowCount));
+        location.href = link;
+      }
+    });
+
+    chart.draw(data, options);
+  }
+</script>

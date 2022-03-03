@@ -1,0 +1,24 @@
+<%- include('partials/budget-chart.ejs') %>
+
+<div id="point"></div>
+
+
+<h1><%= budget_name %></h1>
+<h2>Budgeted Amount: <%= budget_amount %></h2>
+<h2>Amount Spent: <%= amount_spent  %>  </h2>
+<br /><br />
+
+
+
+<div class="row">
+  <% expenses.forEach(expense => { %>
+    <div>
+      <%= expense.name %></br>
+      $<%= expense.expense_amount %></br>
+      By User: <%= expense.username %></br>
+      Spend Date: <%= expense.spend_date %></br>
+
+      </br>
+    <div>
+  <% }) %> 
+</div>

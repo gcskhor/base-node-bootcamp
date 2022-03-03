@@ -1,6 +1,6 @@
-  <%- include('partials/root-charts-copy.ejs') %>
+  <%- include('partials/root-charts.ejs') %>
 
-
+  
 <div id="donutchart" style="width: 900px; height: 500px;"></div>
 <div id="point">
 </div>
@@ -16,7 +16,6 @@
           <%= expense.name %></br>
           $ <%= expense.expense_amount %></br>
           By User: <%= expense.username %></br>
-          Spend Date: <%= expense.spend_date %></br>
         </br>
         <div>
       <% }) %> 

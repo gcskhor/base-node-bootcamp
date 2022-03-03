@@ -8,6 +8,7 @@ import expressLayouts from 'express-ejs-layouts';
 import jsSHA from 'jssha';
 import schedule from 'node-schedule';
 import multer from 'multer';
+import moment from 'moment';
 
 // set the name of the upload directory here
 const multerUpload = multer({ dest: 'uploads/' });
@@ -37,125 +38,8 @@ const SALT = 'giv me!Ur money$$$';
 // ------------------------------------------------------------------------------- //
 // HELPER FUNCTIONS
 
-const getHash = (input) => {
-  const shaObj = new jsSHA('SHA-512', 'TEXT', { encoding: 'UTF8' });
-  const unhashedString = `${input}${SALT}`;
-  shaObj.update(unhashedString);
-  return shaObj.getHash('HEX');
-};
-
-// CHECK IF EMAIL ADDRESS EXISTS IN USERS TABLE
-// const checkIfEmailExists = (emailInput) => {
-//   const emailQuery = `SELECT * FROM users WHERE email = '${emailInput}'`;
-
-//   pool.query(emailQuery)
-//     .then((result) => {
-//       if (result.rows.length > 0) {
-//         return true;
-//       }
-
-//       return false;
-//     });
-// };
-
-const checkIfEmailExists = (emailInput) => {
-  const emailQuery = `SELECT * FROM users WHERE email = '${emailInput}'`;
-
-  return pool.query(emailQuery)
-    .then((result) => result.rows.length > 0);
-};
-
-// const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
-//   console.log('job!!');
-//   testjob.cancel();
-// });
-
-// ------------------------------------------------------------------------------- //
-//  CUSTOM MIDDLEWARE
-
-app.use((request, response, next) => {
-  if (request.path === '/some-path') {
-    response.status(404).send('sorry');
-    return;
-  }
-  next();
-});
-
-// HASH VERIFICATION MIDDLEWARE
-// -> add preauthenticated routes (login/create account) to not need hashcheck
-const loginCheck = (req, res, next) => {
-  // res.locals.test = 'test string';
-  req.isUserLoggedIn = false; // default value
-  if (req.cookies.userId) {
-    const userHash = getHash(req.cookies.userId);
-    const familyHash = getHash(req.cookies.familyId);
-    if (req.cookies.userIdHash === userHash && req.cookies.familyIdHash === familyHash) {
-      req.isUserLoggedIn = true;
-      console.log('hash for both family and user id match!');
-      res.locals.userId = req.cookies.userId; // pass userId of the user into middleware.
-    }
-    // else {
-    //   res.status(403).render('login');
-    // }
-    next();
-  }
-};
-
-// // check if user exists during signups
-// const checkUserExists = (req, res, next) => {
-//   const results = req.body;
-//   const { email, username, main_user_email } = results; // get out values to check
-//   console.log('does the main user email entry exist?');
-//   console.log(main_user_email);
-
-//   const emailQuery = (input) => `SELECT * FROM users WHERE email = '${input}'`;
-
-//   pool.query(emailQuery(email))
-//     .then((result) => {
-//       console.log(result.rows);
-
-//       req.userAlrExists = false;
-//       req.parentNonExistent = false;
-
-//       if (result.rows.length > 0) {
-//         // res.locals.userExists = 'That email already exists.';
-//         req.userAlrExists = true;
-//         console.log('user alr exists');
-
-//         // res.send('That email already exists.');
-//       }
-//       else if (main_user_email) {
-//         console.log(emailQuery(main_user_email));
-
-//         pool.query(emailQuery(main_user_email))
-//           .then((result2) => {
-//             console.log('check .then of parent user');
-//             console.log(result2.rows);
-
-//             if (result2.rows.length === 0) {
-//               // res.locals.userExists = 'That email already exists.';
-//               req.parentNonExistent = true;
-//               console.log('parent non existent');
-
-//               // res.send('No such parent account exists');
-//             }
-//           });
-//       }
-//     });
-
-//   next();
-// };
-
-// ------------------------------------------------------------------------------- //
-
-app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
-  // https://developers.google.com/chart/interactive/docs/gallery/barchart
-  // STACKED BAR CHART - GOOGLE CHARTS
-  console.log('get / request came in');
-  console.log(req.isUserLoggedIn);
-  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
-    res.status(403).send('please log in again.');
-  }
+// abstract this into a getsData function that returns data based on the directory.
+const getData = (req, res) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
@@ -163,9 +47,10 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   const selectFamilyUsersQuery = `SELECT * FROM users WHERE family_id = ${familyId}`;
   const usernameIdArray = [];
   const budgetIdArray = [];
+  // let budgetExists = true;
   let data;
 
-  pool.query(selectFamilyUsersQuery)
+  return pool.query(selectFamilyUsersQuery)
     .then((result) => {
       // get out familyuser data.
 
@@ -174,16 +59,22 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
       });
       const selectBudgetQuery = `
       SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount
-      FROM budgets 
-      WHERE budgets.family_id=(SELECT users.family_id from users WHERE users.id = ${userId});
+      FROM budgets
+      WHERE budgets.family_id=${familyId};
       `;
+
+      // budgets.family_id=(SELECT users.family_id from users WHERE users.id = ${userId})
 
       return pool.query(selectBudgetQuery);
     })
 
     .then((result) => {
       data = result.rows;
-      // console.log(data);
+
+      // check if no budgets exist yet
+      if (data.length === 0) {
+        return res.render('no-budgets');
+      }
 
       // add budget ids into separate array
       data.forEach((budget, index) => {
@@ -192,16 +83,17 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
 
       // create query with string literals to throw in budgetIdArray
       const selectExpenseByBudgetIdQuery = `
-      SELECT expenses.name, expenses.budget_id, expenses.expense_amount, expenses.user_id, users.username FROM expenses
+      SELECT expenses.name, expenses.budget_id, expenses.expense_amount, expenses.spend_date, expenses.user_id, users.username FROM expenses
       INNER JOIN users ON expenses.user_id = users.id
       WHERE expenses.budget_id IN (${budgetIdArray})
+      ORDER BY expenses.spend_date ASC
       `;
 
       return pool.query(selectExpenseByBudgetIdQuery);
     })
+
     .then((results) => {
       const allExpenses = results.rows;
-      // console.table(allExpenses);
       data.forEach((budget, index) => {
         budget.users = usernameIdArray; // add users into each budget object
 
@@ -270,24 +162,19 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
         });
       });
 
-      console.log(usernameIdArray);
-      console.log(perUserTotalSpendArray);
       usernameIdArray.forEach((user, index) => {
         gDonutBodyArray.push([user]);
         gDonutBodyArray[index].push(perUserTotalSpendArray[index]);
       });
 
-      // console.log(gDonutBodyArray);
       const gDonutArray = [gDonutHeaderArray, ...gDonutBodyArray];
-      console.log(gDonutArray);
 
-      // ###################################################
-      // ###################################################
       // BAR CHART
       // HEADER ARRAY
       const gBarHeaderArray = ['Budgets', ...data[0].users];
       // gBarHeaderArray.push(data[0].users);
       gBarHeaderArray.push('Remaining Budget');
+      gBarHeaderArray.push({ role: 'links' });
 
       // BODY ARRAY
       const gBarBodyArray = [];
@@ -295,15 +182,17 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
         gBarBodyArray.push(budget.userTotalSpendArray);
         budget.userTotalSpendArray.push(budget.remainingBudget);
       });
-      gBarBodyArray.forEach((bodyArray, index) => bodyArray.unshift(data[index].budget_name));
+      gBarBodyArray.forEach((bodyArray, index) => {
+        // console.log(bodyArray);
 
+        bodyArray.push(`/budget/${data[index].budget_id}`);
+        bodyArray.unshift(data[index].budget_name);
+      });
+
+      // console.log(data);
       const gBarArray = [...[gBarHeaderArray], ...gBarBodyArray];
-
-      // console.log(gBarHeaderArray);
-      // console.log(gBarBodyArray);
       // console.log(gBarArray);
 
-      //   ###################################################
       //   ###### DONUT CHART DATA SHOULD LOOK LIKE THIS #######
       // [
       //   ["User", "Spend per user"],
@@ -311,27 +200,113 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
       //   ["Kid 1", 2],
       //   ["Kid 2", 2],
       // ];
-      //   ################################################
       //   ###### BAR CHART DATA SHOULD LOOK LIKE THIS #######
       // [
-      //   ['Budgets', 'Boss', 'kid1', 'kid2', 'Remaining Budget'],
-      //   ['Household', 10, 20, 30, 140],
-      //   ['Fun Stuff', 0, 12000, 20, 0],
-      //   ['NFTs', 0, 20000, 0, 0],
+      //   ['Budgets', 'Boss', 'kid1', 'kid2', 'Remaining Budget', { role: 'link'}],
+      //   ['Household', 10, 20, 30, 140, '/budget/1'],
+      //   ['Fun Stuff', 0, 12000, 20, 0, '/budget/2'],
+      //   ['NFTs', 0, 20000, 0, 0, '/budget/5'],
       // ];
-      //   ################################################
 
       // ---------------END WRANGLING DATA-----------------
       // ##################################################
 
-      // console.log(data);
-      const dataObj = { results: data, gBarData: gBarArray, gDonutData: gDonutArray };
+      let budgetExists = true;
 
-      return res.render('root', dataObj);
+      if (data.length === 0) {
+        budgetExists = false;
+      }
+
+      // console.log(data);
+      const dataObj = {
+        results: data,
+        gBarData: gBarArray,
+        gBarRowCount: gBarHeaderArray.length - 1,
+        gDonutData: gDonutArray,
+        doBudgetsExist: budgetExists,
+      };
+      console.log('this is at the end of getData()');
+      console.log(budgetExists);
+      // console.log(dataObj.doBudgetsExist);
+      return dataObj;
     })
     .catch((error) => {
       console.log('Error executing query', error.stack);
     });
+};
+
+const getHash = (input) => {
+  const shaObj = new jsSHA('SHA-512', 'TEXT', { encoding: 'UTF8' });
+  const unhashedString = `${input}${SALT}`;
+  shaObj.update(unhashedString);
+  return shaObj.getHash('HEX');
+};
+
+const checkIfEmailExists = (emailInput) => {
+  const emailQuery = `SELECT * FROM users WHERE email = '${emailInput}'`;
+
+  return pool.query(emailQuery)
+    .then((result) => result.rows.length > 0);
+};
+
+// const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
+//   console.log('job!!');
+//   testjob.cancel();
+// });
+
+// ------------------------------------------------------------------------------- //
+//  CUSTOM MIDDLEWARE
+
+app.use((request, response, next) => {
+  if (request.path === '/some-path') {
+    response.status(404).send('sorry');
+    return;
+  }
+  next();
+});
+
+// HASH VERIFICATION MIDDLEWARE
+// -> add preauthenticated routes (login/create account) to not need hashcheck
+const loginCheck = (req, res, next) => {
+  // res.locals.test = 'test string';
+  req.isUserLoggedIn = false; // default value
+  if (req.cookies.userId) {
+    const userHash = getHash(req.cookies.userId);
+    const familyHash = getHash(req.cookies.familyId);
+    if (req.cookies.userIdHash === userHash && req.cookies.familyIdHash === familyHash) {
+      req.isUserLoggedIn = true;
+      console.log('hash for both family and user id match!');
+      res.locals.userId = req.cookies.userId; // pass userId of the user into middleware.
+    }
+    // else {
+    //   res.status(403).render('login');
+    // }
+    next();
+  }
+};
+
+// ------------------------------------------------------------------------------- //
+app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
+  console.log('get /users request came in');
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+
+  getData(req, res).then((resultData) => {
+    // console.table(resultData);
+    // console.log(resultData.doBudgetsExist);
+    res.render('root', resultData); });
+});
+
+app.get('/users', loginCheck, (req, res) => {
+  console.log('get /users request came in');
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+
+  getData(req, res).then((resultData) => {
+    console.log(resultData);
+    res.render('users', resultData); });
 });
 
 app.get('/signup/new-family', (req, res) => {
@@ -339,45 +314,61 @@ app.get('/signup/new-family', (req, res) => {
   res.render('signup/new-family');
 });
 
-app.get('/signup/link-existing', (req, res) => {
+app.get('/signup/link-existing/:userId', (req, res) => {
   console.log('link to existing family happening!');
-  res.render('signup/link-existing');
+  const { userId } = req.params;
+  console.log(userId);
+
+  // get userId username on the page (link to ${username}'s family);
+  pool.query(`SELECT username FROM users WHERE id=${userId}`)
+    .then((result) => {
+      const parentUserData = result.rows[0];
+      parentUserData.userId = userId;
+
+      console.log(parentUserData);
+
+      return res.render('signup/link-existing', parentUserData);
+    });
 });
 
 app.post('/signup/link-existing', (req, res) => {
+  console.log(req.body);
+
   const results = req.body;
-  const { email, username, main_user_email } = results; // get out values to check
+  const { email, username, parent_id } = results; // get out values to check
+
   const emailQuery = 'SELECT * FROM users WHERE email = $1';
   let emailDup = false; // set defaultValue
-  let mainEmailDup = true; // set defaultValue
+
+  // const mainEmailDup = true; // set defaultValue
 
   const promiseResults = Promise.all([
     pool.query(emailQuery, [email]),
-    pool.query(emailQuery, [main_user_email]),
+    // pool.query(emailQuery, [main_user_email]),
   ]).then((allResults) => {
-    console.log('0');
-    console.log(allResults[0].rows.length);
+    // console.log('0');
+    // console.log(allResults[0].rows.length);
 
     if (allResults[0].rows.length > 0) { // user email alr exists
       emailDup = true;
       return res.send('this email alr exists in our system, choose a new email.');
     }
 
-    if (allResults[1].rows.length === 0) { // email does not exist
-      mainEmailDup = false;
-      console.log('this parent email does not exist.');
-      return res.send('parent email does not exist, choose a new email.');
-    }
+    // if (allResults[1].rows.length === 0) { // email does not exist
+    //   mainEmailDup = false;
+    //   console.log('this parent email does not exist.');
+    //   return res.send('parent email does not exist, choose a new email.');
+    // }
   })
     .then((result) => {
-      if (!emailDup && mainEmailDup) {
+      if (!emailDup) {
         const hashedPassword = getHash(req.body.password);
-        console.log('no user dup, parent email exists!');
+        console.log('no user dup!');
 
         // query insert user first
-        const insertUserQuery = 'INSERT INTO users (email, username, password) VALUES ($1, $2, $3) RETURNING id';
-        const userValues = [req.body.email, req.body.username, hashedPassword];
-        // console.table(userValues);
+        const insertUserQuery = 'INSERT INTO users (email, username, password, family_id) VALUES ($1, $2, $3, $4) RETURNING id';
+        const userValues = [req.body.email, username, hashedPassword, parent_id];
+        console.log(userValues);
 
         pool.query(insertUserQuery, userValues)
           .then((result) => res.send(`${req.body.username} account created!`));
@@ -429,7 +420,6 @@ app.post('/signup/new-family', (req, res) => {
             return pool.query(insertFamilyQuery);
           })
           .then((result) => {
-            console.log(result); // UNABLE TO RETRIEVE RESULTS FOR SOME REASON
             if (result.rows.length === 0) {
               throw 'problem with inserting into families table';
             }
@@ -440,11 +430,9 @@ app.post('/signup/new-family', (req, res) => {
 
             return pool.query(updateUserFamilyIdQuery);
           })
-          .then((result) =>
-          // if (result.rows.length === 0) {
-          //   throw 'problem with inserting into users table #2';
-          // }
-            res.status(200).send(`${req.body.username} user's family created`))
+          .then((result) => {
+            res.render('created-family', { link: `http://localhost:${PORT}/signup/link-existing/${userId}` });
+          })
           .catch((error) => { console.log(error.stack); });
       }
     });
@@ -488,7 +476,8 @@ app.post('/login', (req, res) => {
     res.cookie('familyIdHash', hashedFamilyId);
     res.cookie('familyId', user.family_id);
 
-    res.send(`logged into ${values}!`);
+    // res.send(`logged into ${values}!`);
+    res.redirect('/');
   });
 });
 
@@ -523,7 +512,7 @@ app.get('/create-expense', (req, res) => {
 });
 
 app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, res) => {
-  console.log(req.file);
+  // console.log(req.file);
 
   // console.log(req.body);
   const { userId } = req.cookies;
@@ -531,14 +520,111 @@ app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, re
 
   const results = req.body;
 
+  // parse DATE
+  const dateFormatted = moment(results.spend_date).format('YYMMDD');
+  console.log(dateFormatted);
+
   console.log(results);
-  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount})`;
+  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted})`;
 
   console.log(insertExpenseQuery);
 
   pool.query(insertExpenseQuery)
     .then((result) => res.send('Added expense!'))
     .catch((error) => { console.log(error.stack); });
+});
+
+app.get('/budget/:id', (req, res) => {
+  console.log('get /budget-id request came in');
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+
+  const { id } = req.params;
+
+  getData(req, res).then((resultData) => {
+    let positionInArray;
+    resultData.results.forEach((budget, index) => {
+      if (Number(budget.budget_id) === Number(id)) {
+        positionInArray = index;
+      }
+    });
+
+    console.log(positionInArray);
+    const singleBudgetGBarData = [];
+    singleBudgetGBarData.push(resultData.gBarData[0]);
+    singleBudgetGBarData.push(resultData.gBarData[positionInArray + 1]); // make id into array position
+
+    // const budgetTotals =
+    const extractedResults = [];
+    const budgetSelected = resultData.results.filter((budget) => budget.budget_id === Number(id));
+
+    // console.log(budgetSelected[0].expenses);
+    budgetSelected[0].expenses.forEach((expense) => { extractedResults.push(expense); });
+
+    const budgetData = {
+      budget_name: budgetSelected[0].budget_name,
+      budget_amount: budgetSelected[0].budget_amount,
+      amount_spent: budgetSelected[0].amountSpent,
+      expenses: extractedResults,
+      gBarData: singleBudgetGBarData,
+    };
+
+    res.render('budget-id', budgetData);
+  });
+});
+
+app.get('/user/:id', (req, res) => {
+  console.log('get /user-id request came in');
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+
+  const { id } = req.params;
+  const { familyId } = req.cookies;
+
+  const query = `
+    SELECT users.id, users.username, expenses.name AS expense_name, expenses.budget_id, expenses.expense_amount, expenses.spend_date 
+    FROM users
+    INNER JOIN expenses ON users.id = expenses.user_id
+    WHERE users.family_id = ${familyId} AND users.id=${id}
+    `;
+  pool.query(query)
+    .then((result) => {
+      console.log(result.rows);
+    });
+
+  // getData(req, res).then((resultData) => {
+  //   console.log(resultData.results[0].expenseByUser);
+
+  //   let positionInArray;
+  //   resultData.results.forEach((budget, index) => {
+  //     if (Number(budget.budget_id) === Number(id)) {
+  //       positionInArray = index;
+  //     }
+  //   });
+
+  //   const singleBudgetGBarData = [];
+  //   singleBudgetGBarData.push(resultData.gBarData[0]);
+  //   singleBudgetGBarData.push(resultData.gBarData[positionInArray + 1]); // make id into array position
+
+  //   // const budgetTotals =
+  //   const extractedResults = [];
+  //   const budgetSelected = resultData.results.filter((budget) => budget.budget_id === Number(id));
+
+  //   // console.log(budgetSelected[0].expenses);
+  //   budgetSelected[0].expenses.forEach((expense) => { extractedResults.push(expense); });
+
+  //   const budgetData = {
+  //     budget_name: budgetSelected[0].budget_name,
+  //     budget_amount: budgetSelected[0].budget_amount,
+  //     amount_spent: budgetSelected[0].amountSpent,
+  //     expenses: extractedResults,
+  //     gBarData: singleBudgetGBarData,
+  //   };
+
+  //   res.render('budget-id', budgetData);
+  // });
 });
 
 app.listen(PORT);
