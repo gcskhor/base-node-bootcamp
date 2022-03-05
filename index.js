@@ -9,6 +9,7 @@ import jsSHA from 'jssha';
 import schedule from 'node-schedule';
 import multer from 'multer';
 import moment from 'moment';
+import methodOverride from 'method-override';
 
 // set the name of the upload directory here
 const multerUpload = multer({ dest: 'uploads/' });
@@ -30,6 +31,7 @@ app.set('layout');
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(methodOverride('_method'));
 
 app.use(express.static('public'));
 
@@ -38,7 +40,12 @@ const SALT = 'giv me!Ur money$$$';
 // ------------------------------------------------------------------------------- //
 // HELPER FUNCTIONS
 
-// abstract this into a getsData function that returns data based on the directory.
+const checkIfUsersExpense = (userId, expenseId) => {
+  const selectExpenseQuery = `SELECT * FROM expenses WHERE user_id = ${userId} AND id=${expenseId}`;
+  return pool.query(selectExpenseQuery)
+    .then((result) => result.rows.length > 0);
+};
+
 const getData = (req, res) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
@@ -83,7 +90,7 @@ const getData = (req, res) => {
 
       // create query with string literals to throw in budgetIdArray
       const selectExpenseByBudgetIdQuery = `
-      SELECT expenses.name, expenses.budget_id, expenses.expense_amount, expenses.spend_date, expenses.user_id, users.username FROM expenses
+      SELECT expenses.id AS expense_id, expenses.name, expenses.budget_id, expenses.expense_amount, expenses.spend_date, expenses.user_id, users.username FROM expenses
       INNER JOIN users ON expenses.user_id = users.id
       WHERE expenses.budget_id IN (${budgetIdArray})
       ORDER BY expenses.spend_date ASC
@@ -293,8 +300,7 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   }
 
   getData(req, res).then((resultData) => {
-    // console.table(resultData);
-    // console.log(resultData.doBudgetsExist);
+    console.log(resultData.results[0].expenses);
     res.render('root', resultData); });
 });
 
@@ -304,9 +310,12 @@ app.get('/users', loginCheck, (req, res) => {
     res.status(403).send('please log in again.');
   }
 
-  getData(req, res).then((resultData) => {
-    console.log(resultData);
-    res.render('users', resultData); });
+  const { familyId } = req.cookies;
+
+  pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
+    .then((result) => {
+      res.render('users', { users: result.rows });
+    });
 });
 
 app.get('/signup/new-family', (req, res) => {
@@ -344,21 +353,11 @@ app.post('/signup/link-existing', (req, res) => {
 
   const promiseResults = Promise.all([
     pool.query(emailQuery, [email]),
-    // pool.query(emailQuery, [main_user_email]),
   ]).then((allResults) => {
-    // console.log('0');
-    // console.log(allResults[0].rows.length);
-
     if (allResults[0].rows.length > 0) { // user email alr exists
       emailDup = true;
       return res.send('this email alr exists in our system, choose a new email.');
     }
-
-    // if (allResults[1].rows.length === 0) { // email does not exist
-    //   mainEmailDup = false;
-    //   console.log('this parent email does not exist.');
-    //   return res.send('parent email does not exist, choose a new email.');
-    // }
   })
     .then((result) => {
       if (!emailDup) {
@@ -481,6 +480,15 @@ app.post('/login', (req, res) => {
   });
 });
 
+app.get('/logout', (req, res) => {
+  res.clearCookie('userId');
+  res.clearCookie('userIdHash');
+  res.clearCookie('familyId');
+  res.clearCookie('familyIdHash');
+
+  res.render('logout');
+});
+
 app.get('/create-budget', (req, res) => {
   res.render('create-budget-copy');
 });
@@ -504,33 +512,52 @@ app.get('/create-expense', (req, res) => {
 
   const getBudgetQuery = `SELECT * FROM budgets WHERE family_id=${familyId}`;
 
-  pool.query(getBudgetQuery).then((result) => {
-    console.table(result.rows);
-    const data = { budgets: result.rows };
+  const getTagsQuery = `
+    SELECT DISTINCT
+      tags.id AS tag_id, 
+      tags.name AS tag_name,
+      families.id AS family_id
+    FROM tags
+      INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+      INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+      INNER JOIN budgets ON expenses.budget_id = budgets.id
+      INNER JOIN families ON budgets.family_id = families.id
+    WHERE families.id=${familyId}
+    `;
+
+  const results = Promise.all([
+    pool.query(getBudgetQuery),
+    pool.query(getTagsQuery),
+  ]).then((allResults) => {
+    console.log(allResults[0].rows);
+    console.log(allResults[1].rows);
+
+    const data = { budgets: allResults[0].rows, tags: allResults[1].rows };
     res.render('create-expense', data);
   });
 });
 
 app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, res) => {
   // console.log(req.file);
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
 
   // console.log(req.body);
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
   const results = req.body;
+  // console.log(results);
 
   // parse DATE
   const dateFormatted = moment(results.spend_date).format('YYMMDD');
-  console.log(dateFormatted);
+  // console.log(dateFormatted);
 
-  console.log(results);
-  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted})`;
-
-  console.log(insertExpenseQuery);
+  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted}, '${results.note}')`;
 
   pool.query(insertExpenseQuery)
-    .then((result) => res.send('Added expense!'))
+    .then((result) => res.redirect('/'))
     .catch((error) => { console.log(error.stack); });
 });
 
@@ -581,50 +608,155 @@ app.get('/user/:id', (req, res) => {
   }
 
   const { id } = req.params;
-  const { familyId } = req.cookies;
 
-  const query = `
-    SELECT users.id, users.username, expenses.name AS expense_name, expenses.budget_id, expenses.expense_amount, expenses.spend_date 
-    FROM users
-    INNER JOIN expenses ON users.id = expenses.user_id
-    WHERE users.family_id = ${familyId} AND users.id=${id}
-    `;
-  pool.query(query)
-    .then((result) => {
-      console.log(result.rows);
+  getData(req, res).then((resultData) => {
+    const budgets = resultData.results;
+    const userExpenseArray = [];
+
+    budgets.forEach((budget) => {
+      budget.expenseByUser.forEach((user) => {
+        user.forEach((expense) => {
+          if (Number(expense.user_id) === Number(id)) { userExpenseArray.push(expense); }
+        });
+      });
     });
 
-  // getData(req, res).then((resultData) => {
-  //   console.log(resultData.results[0].expenseByUser);
+    res.render('user-id', { user: userExpenseArray });
+  });
+});
 
-  //   let positionInArray;
-  //   resultData.results.forEach((budget, index) => {
-  //     if (Number(budget.budget_id) === Number(id)) {
-  //       positionInArray = index;
-  //     }
-  //   });
+app.get('/expense/:id', (req, res) => {
+  console.log('get /expense-id request came in');
+  if (req.isUserLoggedIn === false) {
+    res.status(403).send('please log in again.');
+  }
 
-  //   const singleBudgetGBarData = [];
-  //   singleBudgetGBarData.push(resultData.gBarData[0]);
-  //   singleBudgetGBarData.push(resultData.gBarData[positionInArray + 1]); // make id into array position
+  const { id } = req.params;
+  const { familyId } = req.cookies;
+  const { userId } = req.cookies;
 
-  //   // const budgetTotals =
-  //   const extractedResults = [];
-  //   const budgetSelected = resultData.results.filter((budget) => budget.budget_id === Number(id));
+  const selectFamilyUsersQuery = `SELECT id FROM users WHERE family_id=${familyId}`;
 
-  //   // console.log(budgetSelected[0].expenses);
-  //   budgetSelected[0].expenses.forEach((expense) => { extractedResults.push(expense); });
+  pool.query(selectFamilyUsersQuery)
 
-  //   const budgetData = {
-  //     budget_name: budgetSelected[0].budget_name,
-  //     budget_amount: budgetSelected[0].budget_amount,
-  //     amount_spent: budgetSelected[0].amountSpent,
-  //     expenses: extractedResults,
-  //     gBarData: singleBudgetGBarData,
-  //   };
+    .then((result) => {
+      const userIds = [];
+      result.rows.forEach((user) => {
+        userIds.push(user.id);
+      });
+      // console.log(userIds);
 
-  //   res.render('budget-id', budgetData);
-  // });
+      const selectExpenseQuery = `
+        SELECT expenses.id, expenses.name AS expense_name, expenses.budget_id, budgets.name AS budget_name, expenses.user_id, users.username, expenses.expense_amount, expenses.spend_date, expenses.note FROM expenses
+        INNER JOIN budgets ON expenses.budget_id = budgets.id
+        INNER JOIN users ON expenses.user_id = users.id
+        WHERE user_id IN (${userIds})
+        `;
+
+      // console.log(selectExpenseQuery);
+      return pool.query(selectExpenseQuery);
+    })
+
+    .then((result) => {
+      // console.log(result.rows);
+
+      const matchingExpenseId = result.rows.filter((expense) => Number(expense.id) === Number(id))[0];
+
+      if (matchingExpenseId.user_id === Number(userId)) {
+        matchingExpenseId.userCreatedExpense = true;
+      }
+      else { matchingExpenseId.userCreatedExpense = false; }
+
+      console.log(matchingExpenseId);
+
+      res.render('expense-id', matchingExpenseId);
+    });
+});
+
+app.post('/expense/:id/delete', loginCheck, (req, res) => {
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+
+  const { userId } = req.cookies;
+  const { id } = req.params;
+
+  // pool query to delete expenses_tag
+
+  checkIfUsersExpense(userId, id)
+    .then((isUsersExpense) => {
+      if (isUsersExpense) {
+        // delete expenses_tags entity to avoid FK_CONSTRAINT issue
+        const deleteExpensesTagQuery = `DELETE FROM expenses_tags WHERE expense_id = ${id}`;
+        return pool.query(deleteExpensesTagQuery);
+      }
+      console.log('not your expense');
+    })
+    .then(() => {
+      const deleteExpenseQuery = `DELETE FROM expenses WHERE id=${id}`;
+      return pool.query(deleteExpenseQuery);
+    })
+    .then(() => {
+      console.log('item deleted');
+      res.redirect('/');
+    });
+});
+
+app.get('/expense/:id/edit', loginCheck, (req, res) => {
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+  const { userId } = req.cookies;
+  const { familyId } = req.cookies;
+  const { id } = req.params;
+
+  const selectExpenseQuery = `
+    SELECT expenses.id, expenses.name, expenses.budget_id, budgets.name AS budget_name, expenses.user_id, expenses.expense_amount, expenses.spend_date, expenses.note FROM expenses INNER JOIN budgets ON expenses.budget_id = budgets.id WHERE expenses.id=${id}`;
+
+  checkIfUsersExpense(userId, id)
+    .then((isUsersExpense) => {
+      if (isUsersExpense) {
+        return Promise.all([
+          pool.query(selectExpenseQuery),
+          pool.query(`SELECT * FROM budgets WHERE family_id=${familyId}`),
+        ]).then((allResults) => {
+          const data = { ...allResults[0].rows[0], budgets: allResults[1].rows };
+          console.log(data);
+          res.render('expense-edit', data);
+        });
+      }
+    });
+});
+
+app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, res) => {
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in again.');
+  }
+  const { userId } = req.cookies;
+  const { familyId } = req.cookies;
+  const { id } = req.params;
+
+  console.log(`a post /expense/${id}/edit request was received`);
+
+  const results = req.body;
+  console.log(results);
+  const dateFormatted = moment(results.spend_date).format('YYMMDD');
+
+  const updateQuery = `
+    UPDATE expenses 
+    SET
+      name='${results.name}',
+      expense_amount=${results.expense_amount},
+      budget_id=${results.budget_id},
+      note='${results.note}',
+      spend_date='${dateFormatted}'
+    WHERE id=${Number(id)}
+    `;
+  pool.query(updateQuery)
+    .then((results) => {
+      console.log('successfully edited expense');
+      res.redirect('/');
+    });
 });
 
 app.listen(PORT);

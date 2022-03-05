@@ -52,7 +52,8 @@ CREATE TABLE expenses (
   user_id SERIAL,
   expense_amount DECIMAL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  spend_date INTEGER,
+  spend_date TEXT,
+  note TEXT,
   -- CONSTRAINT fk_budget
   --   FOREIGN KEY(budget_id)
   --     REFERENCES budgets(id)
@@ -114,9 +115,9 @@ INSERT INTO budgets (name, family_id, budget_amount) VALUES ('food', 2, 800);
 INSERT INTO budgets (name, family_id, budget_amount) VALUES ('games', 2, 1000);
 
 -- fam 1
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('soap', 1, 1, 10, 220301);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('soap', 1, 1, 10, 220301, 'i wanna be clean');
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('hairspray', 1, 2, 20, 220301);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('cheese', 1, 3, 30, 220302);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('cheese', 1, 3, 30, 220302, 'was a little mouldy but i still like');
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('botw2', 2, 2, 60, 220303);
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('baba is you', 2, 3, 20, 220302);
 
@@ -129,10 +130,16 @@ INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALU
 
 INSERT INTO tags (name) VALUES ('games');
 INSERT INTO tags (name) VALUES ('food');
-INSERT INTO tags (name) VALUES ('shower');
+INSERT INTO tags (name) VALUES ('impulsive buy');
+INSERT INTO tags (name) VALUES ('transport');
+INSERT INTO tags (name) VALUES ('software');
+INSERT INTO tags (name) VALUES ('essential');
+
+
+
 
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (1, 4);
-INSERT INTO expenses_tags (tag_id, expense_id) VALUES (1, 4);
+INSERT INTO expenses_tags (tag_id, expense_id) VALUES (3, 4);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (2, 3);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (3, 1);
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (3, 2);

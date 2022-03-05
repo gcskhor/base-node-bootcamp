@@ -2,25 +2,37 @@
 
 
 <div id="donutchart" style="width: 900px; height: 500px;"></div>
-<div id="point">
-</div>
+<div id="point"></div>
 
 <div class="row">
+
   <% results.forEach(budget => { %>
+
     <div class="col-9">
-      <h3><%= budget.budget_name %> </h3>
-      <h5>Expenditure: $<%= budget.amountSpent %> </h5>
-      <h5>Budget: $<%= budget.budget_amount %> </h5>
+
+      <div class="budget-summary">
+
+        <h3><%= budget.budget_name %> </h3>
+        <h5>Expenditure: $<%= budget.amountSpent %> </h5>
+        <h5>Budget: $<%= budget.budget_amount %> </h5>
+
+      </div>
+
       <% budget.expenses.forEach(expense => { %>
-        <div>
-          <%= expense.name %></br>
-          $ <%= expense.expense_amount %></br>
-          By User: <%= expense.username %></br>
-          Spend Date: <%= expense.spend_date %></br>
-        </br>
-        <div>
+        
+        <a href="/expense/<%= expense.expense_id %>" style="text-decoration: none">
+          <div class="col-9 expense-summary">
+            <%= expense.name %> </br>
+            $<%= expense.expense_amount %></br>
+            By User: <%= expense.username %></br>
+            Spend Date: <%= expense.spend_date %>
+          </div>
+        </a>
+      
       <% }) %> 
-      </div></br>
+
     </div>
+
   <% }) %>
+
 </div>

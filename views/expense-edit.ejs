@@ -1,6 +1,6 @@
 <form
   class="row g-3 needs-validation"
-  action="/create-expense"
+  action="/expense/<%= id %>/edit?_method=PUT"
   method="POST"
   novalidate
   enctype="multipart/form-data"
@@ -8,7 +8,14 @@
   <!--  EXPENSE CATEGORY -->
   <div class="col-md-4">
     <label for="name" class="form-label">Expense Name</label>
-    <input type="text" class="form-control" id="name" name="name" required />
+    <input
+      type="text"
+      class="form-control"
+      id="name"
+      name="name"
+      value="<%= name %>"
+      required
+    />
     <div class="invalid-feedback">Type something!</div>
     <div class="valid-feedback">Amazing!</div>
   </div>
@@ -17,7 +24,7 @@
   <div class="col-md-4">
     <label for="budget_id" class="form-label">Budget</label>
     <select name="budget_id" class="form-control">
-      <option value="" selected disabled hidden>Select a budget</option>
+      <option value="<%= budget_id %>"><%= budget_name %></option>
       <% budgets.forEach((budget) => { %>
       <option value="<%= budget.id %>"><%= budget.name %></option>
       <% }); %>
@@ -32,6 +39,7 @@
       class="form-control"
       id="expense_amount"
       name="expense_amount"
+      value="<%= expense_amount %>"
       required
     />
     <div class="invalid-feedback">Type something!</div>
@@ -48,15 +56,10 @@
       rows="10"
       class="form-control"
       placeholder="Write something here"
-    ></textarea
+    >
+<%= note %></textarea
     ><br />
   </div>
-
-  <!-- TAGS -->
-  <% tags.forEach((tag) => { %>
-  <label><%= tag.tag_name %></label>
-  <input type="checkbox" name="tag_ids" value="<%= tag.tag_id %>" />
-  <% }); %>
 
   <!-- SPEND DATE -->
   <div class="col-md-4">
@@ -68,6 +71,7 @@
       id="date"
       min="2015/01/01"
       placeholder="mm/dd/yyyy"
+      value="<%= spend_date %>"
       required
     />
     <div class="invalid-feedback">Please enter a date</div>

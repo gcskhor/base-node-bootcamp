@@ -29,9 +29,29 @@
 -- WHERE budgets.family_id=(SELECT users.family_id from users WHERE users.id = 2);
 
 
--- SELECT EXPENSES FROM BUDGETS
-SELECT expenses.name, expenses.expense_amount, users.username FROM expenses
-INNER JOIN users ON expenses.user_id = users.id
-WHERE expenses.budget_id = 3;
+-- -- SELECT EXPENSES FROM BUDGETS
+-- SELECT expenses.name, expenses.expense_amount, users.username FROM expenses
+-- INNER JOIN users ON expenses.user_id = users.id
+-- WHERE expenses.budget_id = 3;
 
 -- SELECT * FROM expenses WHERE budget_id IN (1,3)
+
+-- select tags from single expense / 
+-- / select expense from single tag
+SELECT 
+  DISTINCT
+    tags.id AS tag_id, 
+    tags.name AS tag_name,
+  -- expenses_tags.tag_id AS et_tagid,
+  -- expenses_tags.expense_id AS et_exid,
+  -- expenses.id AS expense_id,
+  -- expenses.name AS expense_name,
+  -- budgets.name AS budget_name,
+  families.id AS family_id
+FROM tags
+INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+INNER JOIN budgets ON expenses.budget_id = budgets.id
+INNER JOIN families ON budgets.family_id = families.id
+
+WHERE families.id = 1;

@@ -1,0 +1,29 @@
+<div class="col-9 expense-summary">
+  <div><%= expense_name %></div>
+  <div><%= budget_name %></div>
+  <div>$<%= expense_amount %></div>
+  <div>
+    Note: <br />
+    <%= note %>
+  </div>
+  <div>By User: <%= username %></div>
+  <div>Spend Date: <%= spend_date %></div>
+</div>
+
+<% if (userCreatedExpense) { %>
+
+<div>
+  <form
+    action="/expense/<%= id %>/delete"
+    method="POST"
+  >
+    <input class="btn btn-primary" type="submit" value="Delete me" />
+  </form>
+
+  <form action="/expense/<%= id %>/edit" method="GET">
+    <input class="btn btn-primary" type="submit" value="Edit me" />
+  </form>
+</div>
+
+<% } %>
+
