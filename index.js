@@ -40,6 +40,23 @@ const SALT = 'giv me!Ur money$$$';
 // ------------------------------------------------------------------------------- //
 // HELPER FUNCTIONS
 
+const checkIfMainUser = (userId, familyId) => {
+  const checkMainUserQuery = `SELECT main_user_id FROM families WHERE id=${familyId}`;
+  console.log('checkmainuser function started');
+
+  return pool.query(checkMainUserQuery)
+    .then((result) => {
+      // console.log(result.rows[0].main_user_id);
+      const mainUserId = result.rows[0].main_user_id;
+
+      // if (mainUserId == userId) {
+      //   return { isMainUser: true };
+      // }
+      // return { isMainUser: false };
+      return mainUserId == userId;
+    });
+};
+
 const checkIfUsersExpense = (userId, expenseId) => {
   const selectExpenseQuery = `SELECT * FROM expenses WHERE user_id = ${userId} AND id=${expenseId}`;
   return pool.query(selectExpenseQuery)
@@ -298,6 +315,7 @@ const loginCheck = (req, res, next) => {
 };
 
 // ------------------------------------------------------------------------------- //
+
 app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   console.log('get /users request came in');
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
@@ -305,7 +323,6 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   }
 
   getData(req, res).then((resultData) => {
-    console.log(resultData.results[0].expenses);
     res.render('root', resultData); });
 });
 
@@ -495,12 +512,25 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/create-budget', (req, res) => {
-  res.render('create-budget-copy');
+  const { userId } = req.cookies;
+  const { familyId } = req.cookies;
+
+  checkIfMainUser(userId, familyId)
+    .then((isMainUser) => {
+      switch (isMainUser) {
+        case true:
+          res.render('create-budget-copy');
+          break;
+        default:
+          res.send('no access');
+          break;
+      }
+    });
 });
 
 app.post('/create-budget', loginCheck, (req, res) => {
   // console.log(req.body);
-  // const { userId } = req.cookies;
+  const { userId } = req.cookies;
   const { familyId } = req.cookies;
   const results = req.body;
 
@@ -517,18 +547,6 @@ app.get('/create-expense', (req, res) => {
 
   const getBudgetQuery = `SELECT * FROM budgets WHERE family_id=${familyId}`;
 
-  // const getTagsQuery = `
-  //   SELECT DISTINCT
-  //     tags.id AS tag_id,
-  //     tags.name AS tag_name,
-  //     families.id AS family_id
-  //   FROM tags
-  //     INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
-  //     INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
-  //     INNER JOIN budgets ON expenses.budget_id = budgets.id
-  //     INNER JOIN families ON budgets.family_id = families.id
-  //   WHERE families.id=${familyId}
-  //   `;
   const getTagsQuery = `
     SELECT tags.id AS tag_id, tags.name AS tag_name FROM tags WHERE tags.family_id=${Number(familyId)}
     `;
