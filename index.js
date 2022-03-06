@@ -256,6 +256,11 @@ const checkIfEmailExists = (emailInput) => {
     .then((result) => result.rows.length > 0);
 };
 
+const parseTagString = (string) => {
+  const tagArray = string.split(' ');
+  return tagArray;
+};
+
 // const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
 //   console.log('job!!');
 //   testjob.cancel();
@@ -512,17 +517,20 @@ app.get('/create-expense', (req, res) => {
 
   const getBudgetQuery = `SELECT * FROM budgets WHERE family_id=${familyId}`;
 
+  // const getTagsQuery = `
+  //   SELECT DISTINCT
+  //     tags.id AS tag_id,
+  //     tags.name AS tag_name,
+  //     families.id AS family_id
+  //   FROM tags
+  //     INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+  //     INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+  //     INNER JOIN budgets ON expenses.budget_id = budgets.id
+  //     INNER JOIN families ON budgets.family_id = families.id
+  //   WHERE families.id=${familyId}
+  //   `;
   const getTagsQuery = `
-    SELECT DISTINCT
-      tags.id AS tag_id, 
-      tags.name AS tag_name,
-      families.id AS family_id
-    FROM tags
-      INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
-      INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
-      INNER JOIN budgets ON expenses.budget_id = budgets.id
-      INNER JOIN families ON budgets.family_id = families.id
-    WHERE families.id=${familyId}
+    SELECT tags.id AS tag_id, tags.name AS tag_name FROM tags WHERE tags.family_id=${Number(familyId)}
     `;
 
   const results = Promise.all([
@@ -766,15 +774,11 @@ app.get('/expense/:id/edit', loginCheck, (req, res) => {
   `;
 
   const unselectedExpensesTagsQuery = `
-      SELECT DISTINCT
-        tags.id AS tag_id, 
+      SELECT 
+        tags.id AS tag_id,
         tags.name AS tag_name
       FROM tags
-        INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
-        INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
-        INNER JOIN budgets ON expenses.budget_id = budgets.id
-        INNER JOIN families ON budgets.family_id = families.id
-      WHERE families.id = ${Number(familyId)}
+      WHERE tags.family_id=${familyId}
       EXCEPT
       (
         SELECT DISTINCT
@@ -870,5 +874,27 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
       res.redirect('/');
     });
 });
+
+app.route('/create-tag')
+  .get((req, res) => {
+    res.render('create-tag');
+  })
+  .post((req, res) => {
+    const tagString = req.body['tag-string'];
+    const tagArray = parseTagString(tagString);
+    console.log(tagArray);
+
+    const { familyId } = req.cookies;
+
+    const createTagQuery = 'INSERT INTO tags (name, family_id) VALUES ($1, $2)';
+    const poolQueryArray = tagArray.map((tag) => {
+      pool.query(createTagQuery, [tag, familyId]);
+    });
+
+    return Promise.all(poolQueryArray)
+      .then((result) => {
+        res.send(`added tags ${tagArray}`);
+      });
+  });
 
 app.listen(PORT);

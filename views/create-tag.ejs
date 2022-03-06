@@ -1,0 +1,28 @@
+<form
+  class="row g-3 needs-validation"
+  action="/create-tag"
+  method="POST"
+  novalidate
+>
+  <!--   TAG INPUT -->
+  <div class="col">
+    <label for="tag-string" class="form-label">Tags</label>
+    <input
+      type="text"
+      class="form-control"
+      id="tag-string"
+      name="tag-string"
+      placeholder="Type your tags here separated by a single space"
+      required
+    />
+    <div class="invalid-feedback">
+      Type your tags here separated by a single space
+    </div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
+
+  <!-- submit button  -->
+  <div class="col-12">
+    <button class="btn btn-primary" type="submit">Submit form</button>
+  </div>
+</form>

@@ -66,14 +66,19 @@ CREATE TABLE expenses (
 CREATE TABLE tags (
   id SERIAL PRIMARY KEY,
   name TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  family_id INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_family
+    FOREIGN KEY(family_id)
+      REFERENCES families(id)
 );
 
 CREATE TABLE expenses_tags (
-  id SERIAL PRIMARY KEY,
-  tag_id SERIAL,
-  expense_id SERIAL,
+  -- id SERIAL PRIMARY KEY,
+  tag_id INTEGER,
+  expense_id INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (tag_id, expense_id),
   CONSTRAINT fk_expense
     FOREIGN KEY(expense_id)
       REFERENCES expenses(id),
@@ -128,12 +133,19 @@ INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALU
 
 
 
-INSERT INTO tags (name) VALUES ('games');
-INSERT INTO tags (name) VALUES ('food');
-INSERT INTO tags (name) VALUES ('impulsive buy');
-INSERT INTO tags (name) VALUES ('transport');
-INSERT INTO tags (name) VALUES ('software');
-INSERT INTO tags (name) VALUES ('essential');
+INSERT INTO tags (name, family_id) VALUES ('games', 1);
+INSERT INTO tags (name, family_id) VALUES ('food', 1);
+INSERT INTO tags (name, family_id) VALUES ('impulsive buy', 1);
+INSERT INTO tags (name, family_id) VALUES ('transport',1);
+INSERT INTO tags (name, family_id) VALUES ('software', 1);
+INSERT INTO tags (name, family_id) VALUES ('essential', 1);
+
+INSERT INTO tags (name, family_id) VALUES ('games', 2);
+INSERT INTO tags (name, family_id) VALUES ('food', 2);
+INSERT INTO tags (name, family_id) VALUES ('impulsive buy', 2);
+INSERT INTO tags (name, family_id) VALUES ('transport',2);
+INSERT INTO tags (name, family_id) VALUES ('software', 2);
+INSERT INTO tags (name, family_id) VALUES ('essential', 2);
 
 
 
