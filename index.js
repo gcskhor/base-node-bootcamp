@@ -548,15 +548,37 @@ app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, re
   const { familyId } = req.cookies;
 
   const results = req.body;
-  // console.log(results);
+  console.log(results);
 
   // parse DATE
   const dateFormatted = moment(results.spend_date).format('YYMMDD');
   // console.log(dateFormatted);
 
-  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted}, '${results.note}')`;
+  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted}, '${results.note}') RETURNING id`;
 
   pool.query(insertExpenseQuery)
+    .then((result) => {
+      const expense_id = result.rows[0].id;
+
+      // console.log(`tag_id: ${results.tag_ids}`);
+      // console.log(`expense_id: ${expense_id}`);
+
+      const poolQueryArray = [];
+      const insertExpensesTagsQuery = 'INSERT INTO expenses_tags (tag_id, expense_id) VALUES ($1, $2)';
+
+      // ensure output of tag_ids is always an array
+      if (!Array.isArray(results.tag_ids)) {
+        results.tag_ids = [results.tag_ids];
+      }
+
+      results.tag_ids.forEach((tag_id) => {
+        poolQueryArray.push(
+          pool.query(insertExpensesTagsQuery, [tag_id, expense_id]),
+        );
+      });
+
+      return Promise.all(poolQueryArray);
+    })
     .then((result) => res.redirect('/'))
     .catch((error) => { console.log(error.stack); });
 });
@@ -651,25 +673,43 @@ app.get('/expense/:id', (req, res) => {
         INNER JOIN budgets ON expenses.budget_id = budgets.id
         INNER JOIN users ON expenses.user_id = users.id
         WHERE user_id IN (${userIds})
-        `;
+      `;
 
-      // console.log(selectExpenseQuery);
-      return pool.query(selectExpenseQuery);
+      const selectTagsQuery = `
+        SELECT 
+          tags.id AS tag_id, 
+          tags.name AS tag_name
+        FROM tags
+          INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+          INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+          INNER JOIN budgets ON expenses.budget_id = budgets.id
+          INNER JOIN families ON budgets.family_id = families.id
+        WHERE expenses.id = ${id};
+      `;
+
+      return Promise.all([
+        pool.query(selectExpenseQuery),
+        pool.query(selectTagsQuery),
+      ]);
     })
 
     .then((result) => {
-      // console.log(result.rows);
-
-      const matchingExpenseId = result.rows.filter((expense) => Number(expense.id) === Number(id))[0];
+      // EXPENSE PROMISE
+      const matchingExpenseId = result[0].rows.filter((expense) => Number(expense.id) === Number(id))[0];
 
       if (matchingExpenseId.user_id === Number(userId)) {
         matchingExpenseId.userCreatedExpense = true;
       }
       else { matchingExpenseId.userCreatedExpense = false; }
 
-      console.log(matchingExpenseId);
+      // TAGS PROMISE
+      const expenseTags = { tagData: result[1].rows };
 
-      res.render('expense-id', matchingExpenseId);
+      // CONSOLIDATE DATA
+      const matchingExpenseIdData = { ...matchingExpenseId, ...expenseTags };
+      console.log(matchingExpenseIdData);
+
+      res.render('expense-id', matchingExpenseIdData);
     });
 });
 
@@ -713,14 +753,59 @@ app.get('/expense/:id/edit', loginCheck, (req, res) => {
   const selectExpenseQuery = `
     SELECT expenses.id, expenses.name, expenses.budget_id, budgets.name AS budget_name, expenses.user_id, expenses.expense_amount, expenses.spend_date, expenses.note FROM expenses INNER JOIN budgets ON expenses.budget_id = budgets.id WHERE expenses.id=${id}`;
 
+  const selectExpensesTagsQuery = `
+    SELECT 
+      tags.id AS tag_id, 
+      tags.name AS tag_name
+    FROM tags
+      INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+      INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+      INNER JOIN budgets ON expenses.budget_id = budgets.id
+      INNER JOIN families ON budgets.family_id = families.id
+    WHERE expenses.id = ${id};
+  `;
+
+  const unselectedExpensesTagsQuery = `
+      SELECT DISTINCT
+        tags.id AS tag_id, 
+        tags.name AS tag_name
+      FROM tags
+        INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+        INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+        INNER JOIN budgets ON expenses.budget_id = budgets.id
+        INNER JOIN families ON budgets.family_id = families.id
+      WHERE families.id = ${Number(familyId)}
+      EXCEPT
+      (
+        SELECT DISTINCT
+          tags.id AS tag_id, 
+          tags.name AS tag_name
+        FROM tags
+          INNER JOIN expenses_tags ON tags.id = expenses_tags.tag_id
+          INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
+          INNER JOIN budgets ON expenses.budget_id = budgets.id
+          INNER JOIN families ON budgets.family_id = families.id
+        WHERE expenses.id = ${Number(id)}
+		  )
+  ;`;
+
   checkIfUsersExpense(userId, id)
     .then((isUsersExpense) => {
       if (isUsersExpense) {
         return Promise.all([
           pool.query(selectExpenseQuery),
           pool.query(`SELECT * FROM budgets WHERE family_id=${familyId}`),
+          pool.query(selectExpensesTagsQuery),
+          pool.query(unselectedExpensesTagsQuery),
         ]).then((allResults) => {
-          const data = { ...allResults[0].rows[0], budgets: allResults[1].rows };
+          console.log(allResults[3].rows);
+
+          const data = {
+            ...allResults[0].rows[0],
+            budgets: allResults[1].rows,
+            tagData: allResults[2].rows,
+            unselectedTagData: allResults[3].rows,
+          };
           console.log(data);
           res.render('expense-edit', data);
         });
@@ -742,7 +827,7 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
   console.log(results);
   const dateFormatted = moment(results.spend_date).format('YYMMDD');
 
-  const updateQuery = `
+  const updateExpenseQuery = `
     UPDATE expenses 
     SET
       name='${results.name}',
@@ -752,7 +837,10 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
       spend_date='${dateFormatted}'
     WHERE id=${Number(id)}
     `;
-  pool.query(updateQuery)
+
+  // const updateExpensesTagsQuery = ``
+
+  pool.query(updateExpenseQuery)
     .then((results) => {
       console.log('successfully edited expense');
       res.redirect('/');

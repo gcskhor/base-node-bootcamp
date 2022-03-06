@@ -6,6 +6,12 @@
     Note: <br />
     <%= note %>
   </div>
+  <div>
+    Tags: 
+    <% tagData.forEach((tag) =>{ %>
+      <%= tag.tag_name %> </br>
+    <% }) %>
+  </div>
   <div>By User: <%= username %></div>
   <div>Spend Date: <%= spend_date %></div>
 </div>
@@ -13,10 +19,7 @@
 <% if (userCreatedExpense) { %>
 
 <div>
-  <form
-    action="/expense/<%= id %>/delete"
-    method="POST"
-  >
+  <form action="/expense/<%= id %>/delete" method="POST">
     <input class="btn btn-primary" type="submit" value="Delete me" />
   </form>
 
@@ -26,4 +29,3 @@
 </div>
 
 <% } %>
-

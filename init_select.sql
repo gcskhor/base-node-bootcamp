@@ -39,7 +39,7 @@
 -- select tags from single expense / 
 -- / select expense from single tag
 SELECT 
-  DISTINCT
+  -- DISTINCT
     tags.id AS tag_id, 
     tags.name AS tag_name,
   -- expenses_tags.tag_id AS et_tagid,
@@ -54,4 +54,5 @@ INNER JOIN expenses ON expenses_tags.expense_id = expenses.id
 INNER JOIN budgets ON expenses.budget_id = budgets.id
 INNER JOIN families ON budgets.family_id = families.id
 
-WHERE families.id = 1;
+WHERE expenses.id = 12;
+-- WHERE families.id = 1;q

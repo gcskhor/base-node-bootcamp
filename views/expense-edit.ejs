@@ -61,6 +61,20 @@
     ><br />
   </div>
 
+  <!-- TAGS -->
+  <!-- pre-selected tags -->
+  <div>Tags</div>
+  <% tagData.forEach((tag) => { %>
+  <label><%= tag.tag_name %></label>
+  <input type="checkbox" name="tag_ids" value="<%= tag.tag_id %>" checked />
+  <% }); %>
+
+  <!-- unselected tags -->
+  <% unselectedTagData.forEach((tag) => { %>
+  <label><%= tag.tag_name %></label>
+  <input type="checkbox" name="tag_ids" value="<%= tag.tag_id %>" />
+  <% }); %>
+
   <!-- SPEND DATE -->
   <div class="col-md-4">
     <label for="date" class="form-label">Date</label>
