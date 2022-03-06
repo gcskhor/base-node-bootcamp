@@ -23,7 +23,7 @@ const pgConnectionConfigs = {
 };
 
 const pool = new Pool(pgConnectionConfigs);
-const PORT = 3005;
+const PORT = 3004;
 const app = express();
 
 app.use(expressLayouts);
@@ -824,7 +824,7 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
   console.log(`a post /expense/${id}/edit request was received`);
 
   const results = req.body;
-  console.log(results);
+  // console.log(results);
   const dateFormatted = moment(results.spend_date).format('YYMMDD');
 
   const updateExpenseQuery = `
@@ -838,10 +838,34 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
     WHERE id=${Number(id)}
     `;
 
-  // const updateExpensesTagsQuery = ``
+  const deleteExpensesTagsQuery = `DELETE FROM expenses_tags WHERE expense_id=${id}`;
 
-  pool.query(updateExpenseQuery)
-    .then((results) => {
+  return Promise.all([
+    pool.query(updateExpenseQuery),
+    pool.query(deleteExpensesTagsQuery),
+  ])
+    .then((allResults) => {
+      console.log(allResults);
+      const poolQueryArray = [];
+      const insertExpensesTagsQuery = 'INSERT INTO expenses_tags (tag_id, expense_id) VALUES ($1, $2)';
+
+      // ensure output of tag_ids is always an array
+      if (!Array.isArray(results.tag_ids)) {
+        results.tag_ids = [results.tag_ids];
+      }
+
+      results.tag_ids.forEach((tag_id) => {
+        poolQueryArray.push(
+          pool.query(insertExpensesTagsQuery, [tag_id, id]),
+        );
+      });
+
+      // console.log(poolQueryArray);
+
+      // return Promise.all(poolQueryArray);
+    })
+
+    .then((result) => {
       console.log('successfully edited expense');
       res.redirect('/');
     });
