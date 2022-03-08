@@ -1,4 +1,4 @@
-<div class="col-9 expense-summary">
+<!-- <div class="col-9 expense-summary">
   <div><%= expense_name %></div>
   <div><%= budget_name %></div>
   <div>$<%= expense_amount %></div>
@@ -14,6 +14,23 @@
   </div>
   <div>By User: <%= username %></div>
   <div>Spend Date: <%= spend_date %></div>
+</div> -->
+
+<div class="card border-secondary mb-3 w-50">
+  <div class="card-header"><%= budget_name %></div>
+  <div class="card-body text-dark">
+    <h4 class="card-title"><%= expense_name %></h4>
+    <h5 class="card-title">$<%= expense_amount %></h5>
+
+    <small class="card-text ml-auto text-muted"><%= note %></small>
+
+    <h5 class="card-title">Tags:</h5>
+    <% tagData.forEach((tag) =>{ %>
+    <span class="badge bg-secondary text-light"><%= tag.tag_name %></span>
+    <% }) %>
+
+    <p class="card-text">By <%= username %> on <%= spend_date %></p>
+  </div>
 </div>
 
 <% if (userCreatedExpense) { %>

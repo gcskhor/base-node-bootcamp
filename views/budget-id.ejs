@@ -2,7 +2,7 @@
 
 <h1 class="budget-header"><b><%= budget_name %></b></h1>
 <h3><b>Budgeted Amount: </b>$<%= budget_amount %></h3>
-<h3><b>Amount Spent: </b>$<%= amount_spent  %>  </h3>
+<h3><b>Amount Spent: </b>$<%= amount_spent %></h3>
 
 <div id="barchart-single-budget"></div>
 
@@ -11,7 +11,7 @@
 <h3><b>Amount Spent: </b>$<%= amount_spent  %>  </h3>
 <br /><br /> -->
 
-<div class="row">
+<!-- <div class="row">
   <% expenses.forEach(expense => { %>
     <div>
       <%= expense.name %></br>
@@ -22,18 +22,23 @@
       </br>
     <div>
   <% }) %> 
-</div>
+</div> -->
 
 <% expenses.forEach(expense => { %>
-  <div class="card expense-card" style="width: 18rem;">
-    <div class="card-body">
-      <h5 class="card-title"><%= expense.name %></h5>
-      <h6 class="card-subtitle mb-2 text-muted">$<%= expense.expense_amount %></h6>
-      <p class="card-text"><%= expense.note %></p>
-      
-      <div class="d-flex">
-        <p class="card-text ml-auto text-muted">By <%= expense.username %> on <%= expense.spend_date %></p>
-      </div>
+<div class="card expense-card" style="width: 18rem">
+  <div class="card-body">
+    <h5 class="card-title"><%= expense.name %></h5>
+    <h6 class="card-subtitle mb-2 text-muted">
+      $<%= expense.expense_amount %>
+    </h6>
+    <p class="card-text"><%= expense.note %></p>
+
+    <div class="d-flex">
+      <p class="card-text ml-auto text-muted">
+        By <%= expense.username %> on <%= expense.spend_date %>
+      </p>
     </div>
+    <a href="/expense/<%= expense.expense_id %>" class="stretched-link"></a>
   </div>
-<% }) %> 
+</div>
+<% }) %>

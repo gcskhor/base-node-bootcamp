@@ -1,3 +1,5 @@
+<h2><b>CREATE BUDGET</b></h2>
+
 <form
   class="row g-3 needs-validation"
   action="/create-budget"
@@ -7,7 +9,14 @@
   <!--  BUDGET CATEGORY -->
   <div class="form-group">
     <label for="name" class="form-label">Budget Name</label>
-    <input type="text" class="form-control" id="name" name="name" required />
+    <input
+      type="text"
+      class="form-control w-75"
+      id="name"
+      name="name"
+      placeholder="Stuff"
+      required
+    />
     <div class="invalid-feedback">Type something!</div>
     <div class="valid-feedback">Amazing!</div>
   </div>
@@ -17,9 +26,10 @@
     <label for="budget_amount" class="form-label">Budget Amount</label>
     <input
       type="number"
-      class="form-control"
+      class="form-control w-75"
       id="budget_amount"
       name="budget_amount"
+      placeholder="$694.20"
       required
     />
     <div class="invalid-feedback">Type something!</div>
@@ -30,7 +40,7 @@
   <div class="form-group">
     <label for="date" class="form-label">Start Date</label>
     <input
-      class="form-control"
+      class="form-control w-75"
       type="date"
       name="start_date"
       id="date"
@@ -52,7 +62,7 @@
         name="repeats_monthly"
       />
       <label class="form-check-label" for="flexSwitchCheckDefault"
-        >Budget repeats monthly?</label
+        >Does this budget repeat monthly?</label
       >
     </div>
   </div>

@@ -1,13 +1,59 @@
-<h2>Log In</h2>
+<h2><b>Log In</b></h2>
 
-<form action="/login" method="POST">
-  <label for="email" class="form-label">email</label>
-  <input type="text" name="email" />
-  <br />
+<form action="/login" method="POST" class="row g-3 needs-validation" novalidate>
+  <div class="form-group">
+    <label for="email" class="form-label">Email Address</label>
+    <input
+      type="text"
+      name="email"
+      class="form-control w-75"
+      id="email"
+      placeholder="big_daddy@gmail.com"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
 
-  <label for="password" class="form-label">password</label>
-  <input type="password" name="password" />
-  <br />
+  <div class="form-group">
+    <label for="password" class="form-label">Password</label>
+    <input
+      type="password"
+      name="password"
+      class="form-control w-75"
+      id="password"
+      required
+    />
+  </div>
 
-  <input type="submit" value="Submit" />
+  <div class="">
+    <button class="btn btn-primary" type="submit">Log In</button>
+  </div>
 </form>
+
+<!-- <form
+  class="row g-3 needs-validation"
+  action="/create-budget"
+  method="POST"
+  novalidate
+>
+   BUDGET CATEGORY
+  <div class="form-group">
+    <label for="name" class="form-label">Budget Name</label>
+    <input
+      type="text"
+      class="form-control w-75"
+      id="name"
+      name="name"
+      placeholder="Stuff"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
+
+  submit button 
+  <div class="col-12">
+    <button class="btn btn-primary" type="submit">Submit form</button>
+  </div>
+</form> -->

@@ -555,8 +555,6 @@ app.post('/signup/new-family', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  checkBudgetsForRecurrence(req, res);
-
   console.log('login request came in');
   res.render('login');
 });
