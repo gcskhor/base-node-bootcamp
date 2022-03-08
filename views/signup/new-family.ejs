@@ -1,20 +1,65 @@
-<h2>Sign up</h2>
-<form action="/signup/new-family" method="POST">
-  <label for="email" class="form-label">email address</label>
-  <input type="text" name="email" />
-  <br />
+<h2><b>SIGN UP</b></h2>
 
-  <label for="username" class="form-label">username</label>
-  <input type="text" name="username" />
-  <br />
+<form
+  action="/signup/new-family"
+  method="POST"
+  class="row g-3 needs-validation"
+  novalidate
+>
+  <div class="form-group">
+    <label for="email" class="form-label">Email Address</label>
+    <input
+      type="text"
+      name="email"
+      class="form-control w-75"
+      id="email"
+      placeholder="big_daddy@gmail.com"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
 
-  <label for="password" class="form-label">password</label>
-  <input type="text" name="password" />
-  <br />
+  <div class="form-group">
+    <label for="username" class="form-label">Username</label>
+    <input
+      type="text"
+      name="username"
+      class="form-control w-75"
+      id="username"
+      placeholder="big_daddy"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
 
-  <label for="family_name" class="form-label">give your family a name:</label>
-  <input type="text" name="family_name" />
-  <br />
+  <div class="form-group">
+    <label for="family_name" class="form-label">Give your family a name</label>
+    <input
+      type="text"
+      name="family_name"
+      class="form-control w-75"
+      id="family_name"
+      placeholder="big daddy's house"
+      required
+    />
+    <div class="invalid-feedback">Type something!</div>
+    <div class="valid-feedback">Amazing!</div>
+  </div>
 
-  <input type="submit" value="Submit" />
+  <div class="form-group">
+    <label for="password" class="form-label">Password</label>
+    <input
+      type="password"
+      name="password"
+      class="form-control w-75"
+      id="password"
+      required
+    />
+  </div>
+
+  <div class="">
+    <button class="btn btn-primary" type="submit">Log In</button>
+  </div>
 </form>

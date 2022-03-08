@@ -1,4 +1,4 @@
-<div class="row">
+<!-- <div class="row">
   <% results.forEach(budget => { %>
 
   <a href="/expense/<%= budget.id %>" style="text-decoration: none"></a>
@@ -14,3 +14,34 @@
 
   <% }) %>
 </div>
+ -->
+
+<h1><b>PAST BUDGETS</b></h1>
+
+<% results.forEach(budget => { %>
+<div class="card expense-card w-50">
+  <div class="card-body">
+    <h5 class="card-title"><b><%= budget.budget_name %></b></h5>
+    <h6 class="card-subtitle mb-2 text-muted">
+      Total amount spent: $<%= budget.amountSpent %>
+    </h6>
+    <h6 class="card-subtitle mb-2 text-muted">
+      Budget Amount: $<%= budget.budget_amount %>
+    </h6>
+    <h6 class="card-subtitle mb-2 text-muted">
+      Budget Left: $<%= budget.remainingBudget %>
+    </h6>
+
+    <div class="d-flex">
+      <p class="card-text ml-auto text-muted">
+        Start Date: <%= budget.start_date %>
+      </p>
+    </div>
+    <!-- links not working because of getData() passing in pastBudget=true -->
+    <!-- <a href="/budget/<%= budget.budget_id %>" class="stretched-link"></a> -->
+    <!-- <form action="/budget/<%= budget.budget_id %>" method="GET" class="row g-3">
+      <button class="btn btn-primary" type="submit">Log In</button>
+    </form> -->
+  </div>
+</div>
+<% }) %>

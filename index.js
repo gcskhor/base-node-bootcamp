@@ -268,9 +268,6 @@ const getData = (req, res, pastBudgets) => {
         budgetExists = false;
       }
 
-      console.log(userIdArray);
-      console.log(usernameIdArray);
-
       let activeUsername = '';
       userIdArray.forEach((id, index) => {
         if (id === Number(userId)) { activeUsername = usernameIdArray[index];
@@ -285,8 +282,6 @@ const getData = (req, res, pastBudgets) => {
         doBudgetsExist: budgetExists,
         activeUser: activeUsername,
       };
-
-      console.log(dataObj);
 
       console.log('this is at the end of getData()');
       console.log(budgetExists);
@@ -333,6 +328,10 @@ app.use((request, response, next) => {
 // HASH VERIFICATION MIDDLEWARE
 // -> add preauthenticated routes (login/create account) to not need hashcheck
 const loginCheck = (req, res, next) => {
+  if (!req.cookies.userId) {
+    res.render('error', { message: 'Please log in to continue.' });
+  }
+
   // res.locals.test = 'test string';
   req.isUserLoggedIn = false; // default value
   if (req.cookies.userId) {
@@ -344,7 +343,7 @@ const loginCheck = (req, res, next) => {
       res.locals.userId = req.cookies.userId; // pass userId of the user into middleware.
     }
     // else {
-    //   res.status(403).render('login');
+    //   res.render('error', { message: 'Please log in to continue.' });
     // }
     next();
   }
@@ -421,12 +420,30 @@ app.get('/users', loginCheck, (req, res) => {
   }
 
   const { familyId } = req.cookies;
+  const { userId } = req.cookies;
 
-  pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
-    .then((result) => {
-      res.render('users', { users: result.rows });
-    })
-    .catch((error) => { console.log(error.stack); });
+  checkIfMainUser(userId, familyId)
+    .then((isMainUser) => {
+      switch (isMainUser) {
+        case true:
+          pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
+            .then((result) => {
+              res.render('users', { users: result.rows });
+            })
+            .catch((error) => { console.log(error.stack); });
+          break;
+        default:
+          // res.send('no access');
+          res.render('error', { message: 'Sorry, you have no access to this feature.' });
+          break;
+      }
+    });
+
+  // pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
+  //   .then((result) => {
+  //     res.render('users', { users: result.rows });
+  //   })
+  //   .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/signup/new-family', (req, res) => {
@@ -481,15 +498,33 @@ app.post('/signup/link-existing', (req, res) => {
         const hashedPassword = getHash(req.body.password);
         console.log('no user dup!');
 
-        // query insert user first
-        const insertUserQuery = 'INSERT INTO users (email, username, password, family_id) VALUES ($1, $2, $3, $4) RETURNING id';
-        const userValues = [req.body.email, username, hashedPassword, parent_id];
-        console.log(userValues);
+        const getFamilyIdQuery = `SELECT id FROM families WHERE main_user_id=${parent_id}`;
+        return pool.query(getFamilyIdQuery)
+          .then((result) => {
+            const familyId = result.rows[0].id;
 
-        pool.query(insertUserQuery, userValues)
-          .then((result) => res.send(`${req.body.username} account created!`));
+            const insertUserQuery = 'INSERT INTO users (email, username, password, family_id) VALUES ($1, $2, $3, $4) RETURNING id';
+            const userValues = [req.body.email, username, hashedPassword, Number(familyId)];
+            console.log(userValues);
+
+            pool.query(insertUserQuery, userValues)
+              .then((result) => {
+                // res.send(`${req.body.username} account created!`);
+                res.redirect('/login');
+              });
+          });
+
+        // // query insert user first
+        // const insertUserQuery = 'INSERT INTO users (email, username, password, family_id) VALUES ($1, $2, $3, $4) RETURNING id';
+        // const userValues = [req.body.email, username, hashedPassword, parent_id];
+        // console.log(userValues);
+
+        // pool.query(insertUserQuery, userValues)
+        //   .then((result) => {
+        //     // res.send(`${req.body.username} account created!`);
+        //     res.redirect('/login');
+        //   });
       }
-      // TO DO: ADD FUNCTIONALITY TO PROVIDE LINK FOR KIDS TO JOIN FAMILY.
     })
     .catch((error) => { console.log(error.stack); });
 });
@@ -520,10 +555,10 @@ app.post('/signup/new-family', (req, res) => {
         const userValues = [req.body.email, req.body.username, hashedPassword];
 
         let userId; // declare null first to reuse later between '.then's
+        let family_Id;
 
         pool.query(insertUserQuery, userValues)
           .then((result) => {
-            console.table(result.rows);
             if (result.rows.length === 0) {
               throw 'problem with inserting into users table #1';
             }
@@ -539,14 +574,33 @@ app.post('/signup/new-family', (req, res) => {
             if (result.rows.length === 0) {
               throw 'problem with inserting into families table';
             }
-            console.log(result);
+            // console.log(result);
             const familyId = result.rows[0].id;
+            console.log('FAMILY ID');
+            console.log(familyId);
+            family_Id = familyId;
 
-            const updateUserFamilyIdQuery = `UPDATE users SET family_id = ${familyId} WHERE id=${userId};`;
+            const updateUserFamilyIdQuery = `UPDATE users SET family_id = ${familyId} WHERE id=${userId}`;
 
             return pool.query(updateUserFamilyIdQuery);
           })
+          .then((resultNew) => {
+            // add default tags to family
+            console.log('family id');
+            console.log(family_Id);
+
+            const addDefaultTagsQuery = `
+            INSERT INTO tags (name, family_id) VALUES ('games', ${family_Id});
+            INSERT INTO tags (name, family_id) VALUES ('food', ${family_Id});
+            INSERT INTO tags (name, family_id) VALUES ('impulsive buy', ${family_Id});
+            INSERT INTO tags (name, family_id) VALUES ('transport', ${family_Id});
+            INSERT INTO tags (name, family_id) VALUES ('software', ${family_Id});
+            INSERT INTO tags (name, family_id) VALUES ('essential', ${family_Id});
+            `;
+            return pool.query(addDefaultTagsQuery);
+          })
           .then((result) => {
+            console.log(result);
             res.render('created-family', { link: `http://localhost:${PORT}/signup/link-existing/${userId}` });
           })
           .catch((error) => { console.log(error.stack); });
@@ -606,7 +660,7 @@ app.get('/logout', (req, res) => {
   res.render('logout');
 });
 
-app.get('/create-budget', (req, res) => {
+app.get('/create-budget', loginCheck, (req, res) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
@@ -617,7 +671,8 @@ app.get('/create-budget', (req, res) => {
           res.render('create-budget-copy');
           break;
         default:
-          res.send('no access');
+          // res.send('no access');
+          res.render('error', { message: 'Sorry, you have no access to this feature.' });
           break;
       }
     });
@@ -641,11 +696,11 @@ app.post('/create-budget', loginCheck, (req, res) => {
   const insertBudgetQuery = `INSERT INTO budgets (name, family_id, budget_amount, start_date, repeats_monthly, active) VALUES ('${results.name}', ${familyId}, ${results.budget_amount}, ${dateFormatted}, ${repeats_monthly}, true)`;
 
   pool.query(insertBudgetQuery)
-    .then((result) => res.send('Added budget!'))
+    .then((result) => res.redirect('/'))
     .catch((error) => { console.log(error.stack); });
 });
 
-app.get('/create-expense', (req, res) => {
+app.get('/create-expense', loginCheck, (req, res) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
@@ -714,7 +769,7 @@ app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, re
     .catch((error) => { console.log(error.stack); });
 });
 
-app.get('/budget/:id', (req, res) => {
+app.get('/budget/:id', loginCheck, (req, res) => {
   console.log('get /budget-id request came in');
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in again.');
@@ -730,7 +785,6 @@ app.get('/budget/:id', (req, res) => {
       }
     });
 
-    console.log(positionInArray);
     const singleBudgetGBarData = [];
     singleBudgetGBarData.push(resultData.gBarData[0]);
     singleBudgetGBarData.push(resultData.gBarData[positionInArray + 1]); // make id into array position
@@ -755,7 +809,7 @@ app.get('/budget/:id', (req, res) => {
     .catch((error) => { console.log(error.stack); });
 });
 
-app.get('/user/:id', (req, res) => {
+app.get('/user/:id', loginCheck, (req, res) => {
   console.log('get /user-id request came in');
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in again.');
@@ -780,7 +834,7 @@ app.get('/user/:id', (req, res) => {
     .catch((error) => { console.log(error.stack); });
 });
 
-app.get('/expense/:id', (req, res) => {
+app.get('/expense/:id', loginCheck, (req, res) => {
   console.log('get /expense-id request came in');
   if (req.isUserLoggedIn === false) {
     res.status(403).send('please log in again.');
@@ -1002,7 +1056,7 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
     .catch((error) => { console.log(error.stack); });
 });
 
-app.route('/create-tag')
+app.route('/create-tag', loginCheck)
   .get((req, res) => {
     res.render('create-tag');
   })
@@ -1025,58 +1079,27 @@ app.route('/create-tag')
       });
   });
 
-app.get('/past-budgets', (req, res) => {
+app.get('/past-budgets', loginCheck, (req, res) => {
   getData(req, res, true)
     .then((result) => {
-      console.log(result.results);
       const data = result;
+      console.log(data);
 
       res.render('past-budgets', data);
       // res.send('past-budgets here');
     });
 });
 
+// extra route to test/execute checkBudgetsForRecurrence()
 app.get('/refresh-budgets', (req, res) => {
   checkBudgetsForRecurrence(req, res);
   res.redirect('/');
 });
 
-// #################################################
-
-// function to set budgets to recur at timing: - terminate old budget - set new budget
-
-// #################################################
-
-// WORKING TIMER
-
-// function test() {
-//   console.log('works!');
-//   let count = 5;
-//   count--;
-//   if (count <= 0) {
-//     t.clear();
-//   }
-// }
-
-// function test2(val) { // this
-//   console.log(new Date().toLocaleString('en-GB'));
-//   // console.log(later.date.localTime());
-//   console.log(val);
-// }
-
-// const sched = later.parse.recur().every(1).month();
-const sched = later.parse.recur().every(5).minute(); // this
-
-// const t = later.setInterval(checkBudgetsForRecurrence, sched);// this
-
-// console.log(later.schedule(sched).next(5));
-
-// const dateOptions = {
-//   weekday: 'long', year: 'numeric', month: 'short', day: 'numeric',
-// };
-
-// console.log(later.schedule(sched).next(5).map((date) => date.toLocaleString('en-GB')));
-// console.log(later.schedule(sched).next(5));
+//  TIMER
+const sched = later.parse.recur().every(1).month();
+// const sched = later.parse.recur().every(5).minute(); // for testing purposes
+const budgetScheduler = later.setInterval(checkBudgetsForRecurrence, sched);
 
 // #################################################
 

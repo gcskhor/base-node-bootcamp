@@ -121,19 +121,28 @@ INSERT INTO budgets (name, family_id, budget_amount, active, start_date) VALUES 
 INSERT INTO budgets (name, family_id, budget_amount, active, start_date) VALUES ('games', 2, 1000, true, '220301');
 
 -- fam 1
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('soap', 1, 1, 10, 220301, 'i wanna be clean');
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('soap', 1, 1, 60, 220301, 'Was that rly smelly soap from adidas');
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('hairspray', 1, 2, 20, 220301);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('cheese', 1, 3, 30, 220302, 'was a little mouldy but i still like');
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('botw2', 2, 2, 60, 220303);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('baba is you', 2, 3, 20, 220302);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('cheese', 1, 1, 30, 220302, 'was a little mouldy but thats how you know its good right');
+
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('stuff from the supermarket', 1, 3, 40, 220301, 'looks like its goona expire realllly soon');
+
+
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('elden ring', 2, 2, 80, 220303);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('gambling on the internet', 2, 3, 700, 220302);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('daddy toys', 2, 1, 50, 220303);
+
 
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('GME', 3, 1, 200, 220302);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('AMC', 3, 2, 100, 220303);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('Shiba Inu', 3, 3, 69, 220304);
+
 
 
 --fam 2
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('eggs', 4, 4, 3, 220303);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('more eggs', 4, 4, 3, 220302);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('even more eggs', 4, 4, 3, 220301);
+-- INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('eggs', 4, 4, 3, 220303);
+-- INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('more eggs', 4, 4, 3, 220302);
+-- INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('even more eggs', 4, 4, 3, 220301);
 
 
 
@@ -143,15 +152,6 @@ INSERT INTO tags (name, family_id) VALUES ('impulsive buy', 1);
 INSERT INTO tags (name, family_id) VALUES ('transport',1);
 INSERT INTO tags (name, family_id) VALUES ('software', 1);
 INSERT INTO tags (name, family_id) VALUES ('essential', 1);
-
-INSERT INTO tags (name, family_id) VALUES ('games', 2);
-INSERT INTO tags (name, family_id) VALUES ('food', 2);
-INSERT INTO tags (name, family_id) VALUES ('impulsive buy', 2);
-INSERT INTO tags (name, family_id) VALUES ('transport',2);
-INSERT INTO tags (name, family_id) VALUES ('software', 2);
-INSERT INTO tags (name, family_id) VALUES ('essential', 2);
-
-
 
 
 INSERT INTO expenses_tags (tag_id, expense_id) VALUES (1, 4);

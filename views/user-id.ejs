@@ -1,4 +1,4 @@
-<div class="row">
+<!-- <div class="row">
   <% user.forEach(expense => { %>
   <div class="col-9">
     <h3><%= expense.name %></h3>
@@ -8,4 +8,24 @@
   </div>
 
   <% }) %>
+</div> -->
+
+<h1><%= user[0].username %></h1>
+<% user.forEach(expense => { %>
+<div class="card expense-card w-50">
+  <div class="card-body">
+    <h5 class="card-title"><%= expense.name %></h5>
+    <h6 class="card-subtitle mb-2 text-muted">
+      $<%= expense.expense_amount %>
+    </h6>
+    <p class="card-text"><%= expense.note %></p>
+
+    <div class="d-flex">
+      <p class="card-text ml-auto text-muted">
+        Purchased on <%= expense.spend_date %>
+      </p>
+    </div>
+    <a href="/expense/<%= expense.expense_id %>" class="stretched-link"></a>
+  </div>
 </div>
+<% }) %>

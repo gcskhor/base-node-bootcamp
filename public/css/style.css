@@ -91,3 +91,8 @@ body {
 .expense-card {
   padding: 4px 0px;
 }
+
+.move-nav {
+  position: relative;
+  left: 100px;
+}
