@@ -5,7 +5,7 @@
   novalidate
 >
   <!--  BUDGET CATEGORY -->
-  <div class="col-md-4">
+  <div class="form-group">
     <label for="name" class="form-label">Budget Name</label>
     <input type="text" class="form-control" id="name" name="name" required />
     <div class="invalid-feedback">Type something!</div>
@@ -13,7 +13,7 @@
   </div>
 
   <!-- BUDGET AMOUNT -->
-  <div class="col-md-4">
+  <div class="form-group">
     <label for="budget_amount" class="form-label">Budget Amount</label>
     <input
       type="number"
@@ -27,7 +27,7 @@
   </div>
 
   <!-- START DATE -->
-  <div class="col-md-4">
+  <div class="form-group">
     <label for="date" class="form-label">Start Date</label>
     <input
       class="form-control"
@@ -40,6 +40,21 @@
     />
     <div class="invalid-feedback">Please enter a start date</div>
     <div class="valid-feedback">Remarkable!</div>
+  </div>
+
+  <!-- REPEATS MONTHLY? -->
+  <div class="form-group">
+    <div class="form-check form-switch">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="flexSwitchCheckDefault"
+        name="repeats_monthly"
+      />
+      <label class="form-check-label" for="flexSwitchCheckDefault"
+        >Budget repeats monthly?</label
+      >
+    </div>
   </div>
 
   <!-- submit button  -->

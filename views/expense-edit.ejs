@@ -6,75 +6,89 @@
   enctype="multipart/form-data"
 >
   <!--  EXPENSE CATEGORY -->
-  <div class="col-md-4">
-    <label for="name" class="form-label">Expense Name</label>
-    <input
-      type="text"
-      class="form-control"
-      id="name"
-      name="name"
-      value="<%= name %>"
-      required
-    />
-    <div class="invalid-feedback">Type something!</div>
-    <div class="valid-feedback">Amazing!</div>
-  </div>
+  <label for="name" class="form-label">Expense Name</label>
+  <input
+    type="text"
+    class="form-control w-75"
+    id="name"
+    name="name"
+    value="<%= name %>"
+    required
+  />
+  <div class="invalid-feedback">Type something!</div>
+  <div class="valid-feedback">Amazing!</div>
 
   <!--  BUDGET -->
-  <div class="col-md-4">
-    <label for="budget_id" class="form-label">Budget</label>
-    <select name="budget_id" class="form-control">
-      <option value="<%= budget_id %>"><%= budget_name %></option>
-      <% budgets.forEach((budget) => { %>
-      <option value="<%= budget.id %>"><%= budget.name %></option>
-      <% }); %>
-    </select>
-  </div>
+  <label for="budget_id" class="form-label">Budget</label>
+  <select name="budget_id" class="form-control w-75">
+    <option value="<%= budget_id %>"><%= budget_name %></option>
+    <% budgets.forEach((budget) => { %>
+    <option value="<%= budget.id %>"><%= budget.name %></option>
+    <% }); %>
+  </select>
 
   <!-- EXPENSE AMOUNT -->
-  <div class="col-md-4">
-    <label for="expense_amount" class="form-label">Expense Amount</label>
-    <input
-      type="number"
-      class="form-control"
-      id="expense_amount"
-      name="expense_amount"
-      value="<%= expense_amount %>"
-      required
-    />
-    <div class="invalid-feedback">Type something!</div>
-    <div class="valid-feedback">Amazing!</div>
-  </div>
+  <label for="expense_amount" class="form-label">Expense Amount</label>
+  <input
+    type="number"
+    class="form-control w-75"
+    id="expense_amount"
+    name="expense_amount"
+    value="<%= expense_amount %>"
+    required
+  />
+  <div class="invalid-feedback">Type something!</div>
+  <div class="valid-feedback">Amazing!</div>
 
   <!-- NOTE TEXT AREA -->
-  <div class="col-md-4">
-    <label for="note">Text:</label><br />
-    <textarea
-      name="note"
-      id="note"
-      cols="30"
-      rows="10"
-      class="form-control"
-      placeholder="Write something here"
-    >
+  <label for="note">Text:</label><br />
+  <textarea
+    name="note"
+    id="note"
+    cols="30"
+    rows="10"
+    class="form-control w-75"
+    placeholder="Write something here"
+  >
 <%= note %></textarea
-    ><br />
-  </div>
+  ><br />
+
 
   <!-- TAGS -->
   <!-- pre-selected tags -->
-  <div>Tags</div>
-  <% tagData.forEach((tag) => { %>
-  <label><%= tag.tag_name %></label>
-  <input type="checkbox" name="tag_ids" value="<%= tag.tag_id %>" checked />
-  <% }); %>
+  <div class="form-check form-check-inline">
+    <% tagData.forEach((tag) => { %>
 
-  <!-- unselected tags -->
-  <% unselectedTagData.forEach((tag) => { %>
-  <label><%= tag.tag_name %></label>
-  <input type="checkbox" name="tag_ids" value="<%= tag.tag_id %>" />
-  <% }); %>
-  <a href="/create-tag"><small>Add more tags?</small></a>
+    <input
+      class="form-check-input"
+      type="checkbox"
+      id="tag_ids"
+      value="<%= tag.tag_id %>"
+      name="tag_ids"
+      checked
+    />
+    <label class="form-check-label" for="tag_ids"><%= tag.tag_name %></label>
+    <br />
+
+    <% }); %>
+
+    <!-- unselected tags -->
+    <% unselectedTagData.forEach((tag) =>{ %>
+
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="tag_ids"
+        value="<%= tag.tag_id %>"
+        name="tag_ids"
+      />
+      <label class="form-check-label" for="tag_ids"><%= tag.tag_name %></label>
+      <br />
+
+    <% }) %> 
+      
+  </div>
+
 
   <!-- SPEND DATE -->
   <div class="col-md-4">

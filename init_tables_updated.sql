@@ -11,8 +11,6 @@ DROP TABLE IF EXISTS users;
 
 
 
-
-
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username TEXT,
@@ -37,7 +35,8 @@ CREATE TABLE budgets (
   name TEXT,
   family_id SERIAL,
   budget_amount DECIMAL,
-  start_date DATE,
+  start_date TEXT,
+  active BOOLEAN,
   repeats_monthly BOOLEAN,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_family
@@ -114,10 +113,12 @@ INSERT INTO users (username, email, password) VALUES ( 'small_orphan', 'small_or
 INSERT INTO families (name, main_user_id) VALUES ('big_daddy_fam', 1);
 INSERT INTO families (name, main_user_id) VALUES ('large_papa_fam', 4);
 
-INSERT INTO budgets (name, family_id, budget_amount) VALUES ('household', 1, 200);
-INSERT INTO budgets (name, family_id, budget_amount) VALUES ('fun stuff', 1, 500);
-INSERT INTO budgets (name, family_id, budget_amount) VALUES ('food', 2, 800);
-INSERT INTO budgets (name, family_id, budget_amount) VALUES ('games', 2, 1000);
+INSERT INTO budgets (name, family_id, budget_amount, repeats_monthly, active, start_date) VALUES ('household', 1, 200, true, true, '220301');
+INSERT INTO budgets (name, family_id, budget_amount, repeats_monthly, active, start_date) VALUES ('fun stuff', 1, 500, false, true, '220301');
+INSERT INTO budgets (name, family_id, budget_amount, repeats_monthly, active, start_date) VALUES ('stonks', 1, 800, true, true, '220301');
+
+INSERT INTO budgets (name, family_id, budget_amount, active, start_date) VALUES ('food', 2, 800, true, '220301');
+INSERT INTO budgets (name, family_id, budget_amount, active, start_date) VALUES ('games', 2, 1000, true, '220301');
 
 -- fam 1
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('soap', 1, 1, 10, 220301, 'i wanna be clean');
@@ -126,10 +127,13 @@ INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('botw2', 2, 2, 60, 220303);
 INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('baba is you', 2, 3, 20, 220302);
 
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('GME', 3, 1, 200, 220302);
+
+
 --fam 2
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('eggs', 3, 4, 3, 220303);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('more eggs', 3, 4, 3, 220302);
-INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('even more eggs', 3, 4, 3, 220301);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('eggs', 4, 4, 3, 220303);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('more eggs', 4, 4, 3, 220302);
+INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date) VALUES ('even more eggs', 4, 4, 3, 220301);
 
 
 

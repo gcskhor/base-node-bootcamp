@@ -1,5 +1,43 @@
 body {
-  padding: 10px;
+  /* padding: 2em; */
+  width: 100%;
+  font-family: "Montserrat", sans-serif;
+  /* display: flex; */
+}
+
+.fixed {
+  /* position: fixed; */
+}
+
+#donutchart {
+  /* width: 400px;
+  height: 300px; */
+  position: relative;
+  left: 10vw;
+
+  height: 40vh;
+  font-family: "Montserrat", sans-serif;
+  /* z-index: -1; */
+}
+
+#barchart {
+  /* width: 1000px; */
+  /* height: 400px; */
+  width: 90vw;
+  height: 50vh;
+  position: relative;
+  right: 10vw;
+  font-family: "Montserrat", sans-serif;
+  /* z-index: -1; */
+}
+
+#barchart-single-budget {
+  width: 90vw;
+  height: 35vh;
+  position: relative;
+  right: 10vw;
+  font-family: "Montserrat", sans-serif;
+  /* z-index: -1; */
 }
 
 .expense-summary {
@@ -16,4 +54,40 @@ body {
   border-radius: 8px;
   padding: 1em;
   margin: 1em;
+}
+
+#info-box {
+  border: #212529 solid 1px;
+}
+
+.header {
+  font-size: 40px;
+}
+
+.info-box-btns {
+  padding: 4px 0px;
+}
+
+.btn-xl {
+  /* margin: 10px;
+  padding: 10px 20px;
+  font-size: 20px;
+  border-radius: 10px;
+  height: 30vh;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  font-size: x-large; */
+  width: 30vw;
+  padding: 20px;
+  font-size: 30px;
+  margin: 5px;
+}
+
+.budget-header {
+  text-transform: uppercase;
+}
+
+.expense-card {
+  padding: 4px 0px;
 }

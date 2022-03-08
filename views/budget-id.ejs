@@ -1,14 +1,15 @@
 <%- include('partials/budget-chart.ejs') %>
 
-<div id="point"></div>
+<h1 class="budget-header"><b><%= budget_name %></b></h1>
+<h3><b>Budgeted Amount: </b>$<%= budget_amount %></h3>
+<h3><b>Amount Spent: </b>$<%= amount_spent  %>  </h3>
 
+<div id="barchart-single-budget"></div>
 
-<h1><%= budget_name %></h1>
-<h2>Budgeted Amount: $<%= budget_amount %></h2>
-<h2>Amount Spent: $<%= amount_spent  %>  </h2>
-<br /><br />
-
-
+<!-- <h1 class="budget-header"><b><%= budget_name %></b></h1>
+<h3><b>Budgeted Amount: </b>$<%= budget_amount %></h3>
+<h3><b>Amount Spent: </b>$<%= amount_spent  %>  </h3>
+<br /><br /> -->
 
 <div class="row">
   <% expenses.forEach(expense => { %>
@@ -22,3 +23,17 @@
     <div>
   <% }) %> 
 </div>
+
+<% expenses.forEach(expense => { %>
+  <div class="card expense-card" style="width: 18rem;">
+    <div class="card-body">
+      <h5 class="card-title"><%= expense.name %></h5>
+      <h6 class="card-subtitle mb-2 text-muted">$<%= expense.expense_amount %></h6>
+      <p class="card-text"><%= expense.note %></p>
+      
+      <div class="d-flex">
+        <p class="card-text ml-auto text-muted">By <%= expense.username %> on <%= expense.spend_date %></p>
+      </div>
+    </div>
+  </div>
+<% }) %> 

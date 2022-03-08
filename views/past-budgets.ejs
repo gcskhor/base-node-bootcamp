@@ -1,0 +1,16 @@
+<div class="row">
+  <% results.forEach(budget => { %>
+
+  <a href="/expense/<%= budget.id %>" style="text-decoration: none"></a>
+    <div class="col-9">
+      <div class="budget-summary">
+        <h3><%= budget.budget_name %></h3>
+        <h5>Expenditure: $<%= budget.amountSpent %></h5>
+        <h5>Budget: $<%= budget.budget_amount %></h5>
+        <h5>Start Date: <%= budget.start_date %></h5>
+      </div>
+    </div>
+  </a>
+
+  <% }) %>
+</div>

@@ -1,5 +1,7 @@
 <% users.forEach((user) => { %>
-<div class="col-9">
-  <h2><a href="/user/<%= user.id %>"><%= user.username %></a></h2>
+<div class="info-box-btns">
+  <a href="/user/<%= user.id %>" class="btn btn-outline-secondary"
+    ><%= user.username %></a
+  >
 </div>
 <% }) %>

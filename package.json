@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/rocketacademy/base-node-bootcamp#readme",
   "dependencies": {
+    "@breejs/later": "^4.1.0",
     "cookie-parser": "^1.4.6",
     "ejs": "^3.1.6",
     "express": "^4.17.3",

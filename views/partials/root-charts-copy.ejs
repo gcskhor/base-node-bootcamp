@@ -7,8 +7,6 @@
 
     var data = google.visualization.arrayToDataTable(JSON.parse(arrayDonut));
 
-    // gDonutData
-
     // [
     //   ["User", "Spend per user"],
     //   ["Daddy", 6],
@@ -19,6 +17,10 @@
     var options = {
       title: "WHO IS SPENDING THE MONEY??",
       pieHole: 0.4,
+      chartArea: {
+        width: "95%",
+        height: "95%",
+      },
     };
 
     var chart = new google.visualization.PieChart(
@@ -33,22 +35,21 @@
   google.charts.setOnLoadCallback(drawStacked);
 
   function drawStacked() {
-    // THIS IS HOW THE DATA SHOULD LOOK
-    // var data = google.visualization.arrayToDataTable([
+    // [
     //   ["Budgets", "Boss", "kid1", "kid2", "Remaining Budget", { role: "link" }],
     //   ["Household", 10, 20, 30, 140, "/budget/1"],
     //   ["Fun Stuff", 0, 12000, 20, 0, "/budget/2"],
     //   ["NFTs", 0, 20000, 0, 0, "/budget/5"],
-    // ]);
+    // ]
 
     var array = `<%- JSON.stringify(gBarData) %>`;
     var data = google.visualization.arrayToDataTable(JSON.parse(array));
 
     var options = {
-      title: "YOUR FAMILY BUDGETS",
-      height: 350,
+      title: "",
       chartArea: {
-        width: "80%",
+        width: "70%",
+        height: "80%",
       },
       isStacked: "percent",
       hAxis: {
@@ -63,10 +64,14 @@
         startup: true,
         duration: 600,
       },
+      textStyle: {
+        fontName: "Montserrat",
+        fontSize: 10,
+      },
     };
 
     var chart = new google.visualization.BarChart(
-      document.getElementById("point")
+      document.getElementById("barchart")
     );
 
     var variableRowCount = `<%= gBarRowCount %>`;
@@ -83,4 +88,9 @@
 
     chart.draw(data, options);
   }
+
+  $(window).resize(function () {
+    drawChart();
+    drawStacked();
+  });
 </script>

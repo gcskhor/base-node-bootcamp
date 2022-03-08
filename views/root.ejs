@@ -1,38 +1,79 @@
-  <%- include('partials/root-charts-copy.ejs') %>
-
-
-<div id="donutchart" style="width: 900px; height: 500px;"></div>
-<div id="point"></div>
+<%- include('partials/root-charts-copy.ejs') %>
 
 <div class="row">
+  <div class="col-1"></div>
+  <!-- INFO AREA -->
+  <div class="col-4">
+    <div class="card border-dark mb-3 h-100">
+      <h2 class="card-header"><b>Hello <%= activeUser %></b></h2>
+      <div class="card-body rounded">
+        <p class="card-text">What would you like to do?</p>
 
-  <% results.forEach(budget => { %>
+        <div class="info-box-btns">
+          <a href="/create-budget" class="btn btn-outline-secondary"
+            >Create a new budget</a
+          >
+        </div>
+        <div class="info-box-btns">
+          <a href="/create-expense" class="btn btn-outline-secondary"
+            >Add an expense</a
+          >
+        </div>
+        <div class="info-box-btns">
+          <a href="/users" class="btn btn-outline-secondary"
+            >See user expenses</a
+          >
+        </div>
+        <div class="info-box-btns">
+          <a href="/past-budgets" class="btn btn-outline-secondary"
+            >View past budgets</a
+          >
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <div class="col-9">
+  <!-- DONUT CHART -->
+  <div class="col-7">
+    <div id="donutchart"></div>
+  </div>
 
-      <div class="budget-summary">
+  <div class="col-12">
+    <div id="barchart"></div>
+  </div>
+</div>
 
-        <h3><%= budget.budget_name %> </h3>
-        <h5>Expenditure: $<%= budget.amountSpent %> </h5>
-        <h5>Budget: $<%= budget.budget_amount %> </h5>
+<!-- 
+  <div class="row">
+
+    <% results.forEach(budget => { %>
+
+      <div class="col-9">
+
+        <div class="budget-summary">
+
+          <h3><%= budget.budget_name %> </h3>
+          <h5>Expenditure: $<%= budget.amountSpent %> </h5>
+          <h5>Budget: $<%= budget.budget_amount %> </h5>
+
+        </div>
+
+        <% budget.expenses.forEach(expense => { %>
+          
+          <a href="/expense/<%= expense.expense_id %>" style="text-decoration: none">
+            <div class="col-9 expense-summary">
+              <%= expense.name %> </br>
+              $<%= expense.expense_amount %></br>
+              By User: <%= expense.username %></br>
+              Spend Date: <%= expense.spend_date %>
+            </div>
+          </a>
+        
+        <% }) %> 
 
       </div>
 
-      <% budget.expenses.forEach(expense => { %>
-        
-        <a href="/expense/<%= expense.expense_id %>" style="text-decoration: none">
-          <div class="col-9 expense-summary">
-            <%= expense.name %> </br>
-            $<%= expense.expense_amount %></br>
-            By User: <%= expense.username %></br>
-            Spend Date: <%= expense.spend_date %>
-          </div>
-        </a>
-      
-      <% }) %> 
+    <% }) %>
 
-    </div>
-
-  <% }) %>
-
-</div>
+  </div>
+ -->

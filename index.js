@@ -6,10 +6,12 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import expressLayouts from 'express-ejs-layouts';
 import jsSHA from 'jssha';
-import schedule from 'node-schedule';
 import multer from 'multer';
 import moment from 'moment';
 import methodOverride from 'method-override';
+
+import later from '@breejs/later';
+import schedule from 'node-schedule';
 
 // set the name of the upload directory here
 const multerUpload = multer({ dest: 'uploads/' });
@@ -23,7 +25,7 @@ const pgConnectionConfigs = {
 };
 
 const pool = new Pool(pgConnectionConfigs);
-const PORT = 3004;
+const PORT = 3007;
 const app = express();
 
 app.use(expressLayouts);
@@ -32,10 +34,12 @@ app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(methodOverride('_method'));
-
 app.use(express.static('public'));
 
 const SALT = 'giv me!Ur money$$$';
+
+// set time to local time.
+later.date.localTime();
 
 // ------------------------------------------------------------------------------- //
 // HELPER FUNCTIONS
@@ -63,13 +67,14 @@ const checkIfUsersExpense = (userId, expenseId) => {
     .then((result) => result.rows.length > 0);
 };
 
-const getData = (req, res) => {
+const getData = (req, res, pastBudgets) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
   // add extra query in the chain to create an array of userIds. (filter expenses using userIds)
   const selectFamilyUsersQuery = `SELECT * FROM users WHERE family_id = ${familyId}`;
   const usernameIdArray = [];
+  const userIdArray = [];
   const budgetIdArray = [];
   // let budgetExists = true;
   let data;
@@ -80,20 +85,38 @@ const getData = (req, res) => {
 
       result.rows.forEach((user) => {
         usernameIdArray.push(user.username);
+        userIdArray.push(user.id);
       });
-      const selectBudgetQuery = `
-      SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount
+
+      // query for active budgets
+      const selectActiveBudgetQuery = `
+      SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount, budgets.start_date
       FROM budgets
-      WHERE budgets.family_id=${familyId};
+      WHERE budgets.family_id=${familyId} AND budgets.active=true;
       `;
 
-      // budgets.family_id=(SELECT users.family_id from users WHERE users.id = ${userId})
+      // query for inactive budgets
+      const selectInactiveBudgetQuery = `
+      SELECT budgets.id AS budget_id, budgets.name AS budget_name, budgets.budget_amount, budgets.start_date
+      FROM budgets
+      WHERE budgets.family_id=${familyId} AND budgets.active=false
+      ORDER BY start_date DESC;
+      `;
+      let selectBudgetQuery;
+      if (!pastBudgets) {
+        console.log('past budget true');
+        selectBudgetQuery = selectActiveBudgetQuery; }
+      if (pastBudgets) {
+        console.log('past budget false');
+        selectBudgetQuery = selectInactiveBudgetQuery; }
 
       return pool.query(selectBudgetQuery);
     })
 
     .then((result) => {
       data = result.rows;
+
+      console.log(result.rows);
 
       // check if no budgets exist yet
       if (data.length === 0) {
@@ -136,6 +159,7 @@ const getData = (req, res) => {
 
         // ------------- end of total budget count --------------
         // using the usernameIdArray, extract expense item objects based on whether their username matches in the array.
+
         budget.expenseByUser = [];
         budget.userTotalSpendArray = [];
         usernameIdArray.forEach((username) => {
@@ -164,6 +188,7 @@ const getData = (req, res) => {
         }
       });
 
+      // console.log(data);
       // ##################################################
       // ---------------WRANGLE DATA IN HERE---------------
 
@@ -232,6 +257,8 @@ const getData = (req, res) => {
       //   ['NFTs', 0, 20000, 0, 0, '/budget/5'],
       // ];
 
+      // compare userIdArray values with cookie id to determine username with usernameIdArray
+
       // ---------------END WRANGLING DATA-----------------
       // ##################################################
 
@@ -241,16 +268,30 @@ const getData = (req, res) => {
         budgetExists = false;
       }
 
-      // console.log(data);
+      console.log(userIdArray);
+      console.log(usernameIdArray);
+
+      let activeUsername = '';
+      userIdArray.forEach((id, index) => {
+        if (id === Number(userId)) { activeUsername = usernameIdArray[index];
+        }
+      });
+
       const dataObj = {
         results: data,
         gBarData: gBarArray,
         gBarRowCount: gBarHeaderArray.length - 1,
         gDonutData: gDonutArray,
         doBudgetsExist: budgetExists,
+        activeUser: activeUsername,
       };
+
+      console.log(dataObj);
+
       console.log('this is at the end of getData()');
       console.log(budgetExists);
+
+      // console.log(dataObj);
       // console.log(dataObj.doBudgetsExist);
       return dataObj;
     })
@@ -277,11 +318,6 @@ const parseTagString = (string) => {
   const tagArray = string.split(' ');
   return tagArray;
 };
-
-// const testjob = schedule.scheduleJob('*/5 * * * * *', () => {
-//   console.log('job!!');
-//   testjob.cancel();
-// });
 
 // ------------------------------------------------------------------------------- //
 //  CUSTOM MIDDLEWARE
@@ -316,14 +352,66 @@ const loginCheck = (req, res, next) => {
 
 // ------------------------------------------------------------------------------- //
 
+const checkBudgetsForRecurrence = () => {
+  // query 1:  select active and recurring budgets and save ids
+
+  // query 2:  select all (active budgets) and (active and recurring budgets) and update to inactive and not recurring
+
+  // query 3: create new budgets whose parameters match saved IDs, set to active and recurring
+
+  const selectRecurringBudgetsQuery = 'SELECT id FROM budgets WHERE active=true AND repeats_monthly=true';
+
+  const budgetIdsToPropagateArray = [];
+
+  console.log('checking budget for recurs_monthly and active');
+
+  // query 1:  select active and recurring budgets and save ids
+  return pool.query(selectRecurringBudgetsQuery)
+    .then((result) => {
+      const activeBudgetsIds = result.rows;
+      const activeBudgetIdArray = [];
+
+      // grab ids of budgets that recur
+      activeBudgetsIds.forEach((idObj) => {
+        activeBudgetIdArray.push(idObj.id);
+        budgetIdsToPropagateArray.push(idObj.id);
+      });
+
+      const updateActiveStatusQuery = 'UPDATE budgets SET active=false, repeats_monthly=false WHERE active=true';
+
+      // query 2:  select all (active budgets) and (active and recurring budgets) and update to inactive and not recurring
+      return pool.query(updateActiveStatusQuery);
+    })
+    .then((result) => {
+      const createNewRecurringBudgetsQuery = `SELECT * FROM budgets WHERE id IN (${budgetIdsToPropagateArray})`;
+      // query 3A: select again budgets previously saved
+      return pool.query(createNewRecurringBudgetsQuery);
+    })
+    .then((result) => {
+      console.log(result.rows);
+      result.rows.forEach((budget) => {
+        const { name, budget_amount, family_id } = budget;
+
+        const dateFormatted = moment(new Date()).format('YYMMDD');
+
+        const createBudgetQuery = 'INSERT INTO budgets (name, budget_amount, family_id, active, repeats_monthly, start_date) VALUES ($1, $2, $3, $4, $5, $6)';
+        const createBudgetValues = [name, budget_amount, family_id, true, true, dateFormatted];
+
+        // query 3B: create new budgets whose parameters match saved IDs, set to active and recurring
+        return pool.query(createBudgetQuery, createBudgetValues);
+      });
+    });
+};
+
 app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   console.log('get /users request came in');
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in again.');
   }
 
-  getData(req, res).then((resultData) => {
-    res.render('root', resultData); });
+  getData(req, res, false).then((resultData) => {
+    res.render('root', resultData); })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/users', loginCheck, (req, res) => {
@@ -337,13 +425,19 @@ app.get('/users', loginCheck, (req, res) => {
   pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
     .then((result) => {
       res.render('users', { users: result.rows });
-    });
+    })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/signup/new-family', (req, res) => {
   console.log('signup new family happening!');
   res.render('signup/new-family');
 });
+
+app.route('/signup')
+  .get((req, res) => {
+    res.render('signup');
+  });
 
 app.get('/signup/link-existing/:userId', (req, res) => {
   console.log('link to existing family happening!');
@@ -359,7 +453,8 @@ app.get('/signup/link-existing/:userId', (req, res) => {
       console.log(parentUserData);
 
       return res.render('signup/link-existing', parentUserData);
-    });
+    })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.post('/signup/link-existing', (req, res) => {
@@ -460,6 +555,8 @@ app.post('/signup/new-family', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+  checkBudgetsForRecurrence(req, res);
+
   console.log('login request came in');
   res.render('login');
 });
@@ -534,7 +631,16 @@ app.post('/create-budget', loginCheck, (req, res) => {
   const { familyId } = req.cookies;
   const results = req.body;
 
-  const insertBudgetQuery = `INSERT INTO budgets (name, family_id, budget_amount) VALUES ('${results.name}', ${familyId}, ${results.budget_amount})`;
+  console.log(results);
+
+  // parse checkbox 'on'response
+  let repeats_monthly = false;
+  if (results.repeats_monthly === 'on') { repeats_monthly = true; }
+
+  // parse DATE
+  const dateFormatted = moment(results.start_date).format('YYMMDD');
+
+  const insertBudgetQuery = `INSERT INTO budgets (name, family_id, budget_amount, start_date, repeats_monthly, active) VALUES ('${results.name}', ${familyId}, ${results.budget_amount}, ${dateFormatted}, ${repeats_monthly}, true)`;
 
   pool.query(insertBudgetQuery)
     .then((result) => res.send('Added budget!'))
@@ -545,7 +651,7 @@ app.get('/create-expense', (req, res) => {
   const { userId } = req.cookies;
   const { familyId } = req.cookies;
 
-  const getBudgetQuery = `SELECT * FROM budgets WHERE family_id=${familyId}`;
+  const getBudgetQuery = `SELECT * FROM budgets WHERE family_id=${familyId} AND active=true`;
 
   const getTagsQuery = `
     SELECT tags.id AS tag_id, tags.name AS tag_name FROM tags WHERE tags.family_id=${Number(familyId)}
@@ -560,7 +666,8 @@ app.get('/create-expense', (req, res) => {
 
     const data = { budgets: allResults[0].rows, tags: allResults[1].rows };
     res.render('create-expense', data);
-  });
+  })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, res) => {
@@ -580,7 +687,7 @@ app.post('/create-expense', [loginCheck, multerUpload.single('photo')], (req, re
   const dateFormatted = moment(results.spend_date).format('YYMMDD');
   // console.log(dateFormatted);
 
-  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, ${dateFormatted}, '${results.note}') RETURNING id`;
+  const insertExpenseQuery = `INSERT INTO expenses (name, budget_id, user_id, expense_amount, spend_date, note) VALUES ('${results.name}', ${results.budget_id}, ${userId}, ${results.expense_amount}, '${dateFormatted}', '${results.note}') RETURNING id`;
 
   pool.query(insertExpenseQuery)
     .then((result) => {
@@ -617,7 +724,7 @@ app.get('/budget/:id', (req, res) => {
 
   const { id } = req.params;
 
-  getData(req, res).then((resultData) => {
+  getData(req, res, false).then((resultData) => {
     let positionInArray;
     resultData.results.forEach((budget, index) => {
       if (Number(budget.budget_id) === Number(id)) {
@@ -646,7 +753,8 @@ app.get('/budget/:id', (req, res) => {
     };
 
     res.render('budget-id', budgetData);
-  });
+  })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/user/:id', (req, res) => {
@@ -657,7 +765,7 @@ app.get('/user/:id', (req, res) => {
 
   const { id } = req.params;
 
-  getData(req, res).then((resultData) => {
+  getData(req, res, false).then((resultData) => {
     const budgets = resultData.results;
     const userExpenseArray = [];
 
@@ -670,7 +778,8 @@ app.get('/user/:id', (req, res) => {
     });
 
     res.render('user-id', { user: userExpenseArray });
-  });
+  })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/expense/:id', (req, res) => {
@@ -692,7 +801,6 @@ app.get('/expense/:id', (req, res) => {
       result.rows.forEach((user) => {
         userIds.push(user.id);
       });
-      // console.log(userIds);
 
       const selectExpenseQuery = `
         SELECT expenses.id, expenses.name AS expense_name, expenses.budget_id, budgets.name AS budget_name, expenses.user_id, users.username, expenses.expense_amount, expenses.spend_date, expenses.note FROM expenses
@@ -736,7 +844,8 @@ app.get('/expense/:id', (req, res) => {
       console.log(matchingExpenseIdData);
 
       res.render('expense-id', matchingExpenseIdData);
-    });
+    })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.post('/expense/:id/delete', loginCheck, (req, res) => {
@@ -765,7 +874,8 @@ app.post('/expense/:id/delete', loginCheck, (req, res) => {
     .then(() => {
       console.log('item deleted');
       res.redirect('/');
-    });
+    })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/expense/:id/edit', loginCheck, (req, res) => {
@@ -890,7 +1000,8 @@ app.put('/expense/:id/edit', [loginCheck, multerUpload.single('photo')], (req, r
     .then((result) => {
       console.log('successfully edited expense');
       res.redirect('/');
-    });
+    })
+    .catch((error) => { console.log(error.stack); });
 });
 
 app.route('/create-tag')
@@ -911,8 +1022,64 @@ app.route('/create-tag')
 
     return Promise.all(poolQueryArray)
       .then((result) => {
-        res.send(`added tags ${tagArray}`);
+        // res.send(`added tags ${tagArray}`);
+        res.redirect('/create-expense');
       });
   });
+
+app.get('/past-budgets', (req, res) => {
+  getData(req, res, true)
+    .then((result) => {
+      console.log(result.results);
+      const data = result;
+
+      res.render('past-budgets', data);
+      // res.send('past-budgets here');
+    });
+});
+
+app.get('/refresh-budgets', (req, res) => {
+  checkBudgetsForRecurrence(req, res);
+  res.redirect('/');
+});
+
+// #################################################
+
+// function to set budgets to recur at timing: - terminate old budget - set new budget
+
+// #################################################
+
+// WORKING TIMER
+
+// function test() {
+//   console.log('works!');
+//   let count = 5;
+//   count--;
+//   if (count <= 0) {
+//     t.clear();
+//   }
+// }
+
+// function test2(val) { // this
+//   console.log(new Date().toLocaleString('en-GB'));
+//   // console.log(later.date.localTime());
+//   console.log(val);
+// }
+
+// const sched = later.parse.recur().every(1).month();
+const sched = later.parse.recur().every(5).minute(); // this
+
+// const t = later.setInterval(checkBudgetsForRecurrence, sched);// this
+
+// console.log(later.schedule(sched).next(5));
+
+// const dateOptions = {
+//   weekday: 'long', year: 'numeric', month: 'short', day: 'numeric',
+// };
+
+// console.log(later.schedule(sched).next(5).map((date) => date.toLocaleString('en-GB')));
+// console.log(later.schedule(sched).next(5));
+
+// #################################################
 
 app.listen(PORT);
