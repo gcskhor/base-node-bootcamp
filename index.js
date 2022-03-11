@@ -17,15 +17,36 @@ import schedule from 'node-schedule';
 const multerUpload = multer({ dest: 'uploads/' });
 
 const { Pool } = pg;
-const pgConnectionConfigs = {
-  user: 'gcskhor',
-  host: 'localhost',
-  database: 'project2',
-  port: 5432, // Postgres server always runs on this port
-};
+
+const PORT = process.env.PORT || 3005;
+
+let pgConnectionConfigs;
+
+// const pgConnectionConfigs = {
+//   user: 'gcskhor',
+//   host: 'localhost',
+//   database: 'project2',
+//   port: 5432, // Postgres server always runs on this port
+// };
+
+if (process.env.DATABASE_URL) {
+  // pg will take in the entire value and use it to connect
+  pgConnectionConfigs = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  };
+} else {
+  pgConnectionConfigs = {
+    user: 'gcskhor',
+    host: 'localhost',
+    database: 'project2',
+    port: 5432, // Postgres server always runs on this port
+  };
+}
 
 const pool = new Pool(pgConnectionConfigs);
-const PORT = 3007;
 const app = express();
 
 app.use(expressLayouts);
@@ -50,13 +71,8 @@ const checkIfMainUser = (userId, familyId) => {
 
   return pool.query(checkMainUserQuery)
     .then((result) => {
-      // console.log(result.rows[0].main_user_id);
       const mainUserId = result.rows[0].main_user_id;
 
-      // if (mainUserId == userId) {
-      //   return { isMainUser: true };
-      // }
-      // return { isMainUser: false };
       return mainUserId == userId;
     });
 };
@@ -314,43 +330,6 @@ const parseTagString = (string) => {
   return tagArray;
 };
 
-// ------------------------------------------------------------------------------- //
-//  CUSTOM MIDDLEWARE
-
-app.use((request, response, next) => {
-  if (request.path === '/some-path') {
-    response.status(404).send('sorry');
-    return;
-  }
-  next();
-});
-
-// HASH VERIFICATION MIDDLEWARE
-// -> add preauthenticated routes (login/create account) to not need hashcheck
-const loginCheck = (req, res, next) => {
-  if (!req.cookies.userId) {
-    res.render('error', { message: 'Please log in to continue.' });
-  }
-
-  // res.locals.test = 'test string';
-  req.isUserLoggedIn = false; // default value
-  if (req.cookies.userId) {
-    const userHash = getHash(req.cookies.userId);
-    const familyHash = getHash(req.cookies.familyId);
-    if (req.cookies.userIdHash === userHash && req.cookies.familyIdHash === familyHash) {
-      req.isUserLoggedIn = true;
-      console.log('hash for both family and user id match!');
-      res.locals.userId = req.cookies.userId; // pass userId of the user into middleware.
-    }
-    // else {
-    //   res.render('error', { message: 'Please log in to continue.' });
-    // }
-    next();
-  }
-};
-
-// ------------------------------------------------------------------------------- //
-
 const checkBudgetsForRecurrence = () => {
   // query 1:  select active and recurring budgets and save ids
 
@@ -402,6 +381,43 @@ const checkBudgetsForRecurrence = () => {
     });
 };
 
+// ------------------------------------------------------------------------------- //
+//  CUSTOM MIDDLEWARE
+
+app.use((request, response, next) => {
+  if (request.path === '/some-path') {
+    response.status(404).send('sorry');
+    return;
+  }
+  next();
+});
+
+// HASH VERIFICATION MIDDLEWARE
+// -> add preauthenticated routes (login/create account) to not need hashcheck
+const loginCheck = (req, res, next) => {
+  if (!req.cookies.userId) {
+    res.render('error', { message: 'Please log in to continue.' });
+  }
+
+  // res.locals.test = 'test string';
+  req.isUserLoggedIn = false; // default value
+  if (req.cookies.userId) {
+    const userHash = getHash(req.cookies.userId);
+    const familyHash = getHash(req.cookies.familyId);
+    if (req.cookies.userIdHash === userHash && req.cookies.familyIdHash === familyHash) {
+      req.isUserLoggedIn = true;
+      console.log('hash for both family and user id match!');
+      res.locals.userId = req.cookies.userId; // pass userId of the user into middleware.
+    }
+    // else {
+    //   res.render('error', { message: 'Please log in to continue.' });
+    // }
+    next();
+  }
+};
+
+// ------------------------------------------------------------------------------- //
+
 app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   console.log('get /users request came in');
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
@@ -409,6 +425,7 @@ app.get('/', loginCheck, (req, res) => { // loginCheck middleware applied
   }
 
   getData(req, res, false).then((resultData) => {
+    console.log(resultData);
     res.render('root', resultData); })
     .catch((error) => { console.log(error.stack); });
 });
@@ -438,12 +455,6 @@ app.get('/users', loginCheck, (req, res) => {
           break;
       }
     });
-
-  // pool.query(`SELECT id, username FROM users WHERE family_id=${familyId}`)
-  //   .then((result) => {
-  //     res.render('users', { users: result.rows });
-  //   })
-  //   .catch((error) => { console.log(error.stack); });
 });
 
 app.get('/signup/new-family', (req, res) => {
